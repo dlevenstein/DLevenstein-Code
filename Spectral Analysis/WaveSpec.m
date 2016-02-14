@@ -1,5 +1,5 @@
 function [freqs,t,spec] = WaveSpec(signal,frange,nfreqs,ncyc,si,space)
-%[freqs,t,spec] = WaveSpec(signal,frange,nfreqs,ncyc,si) calculates the 
+%[freqs,t,spec] = WaveSpec(signal,frange,nfreqs,ncyc,si,space) calculates the 
 %wavelet transform of a signal with nfreqs frequencies in the range frange 
 %[fmin fmax]. Spacing between frequencies can be 'lin' or 'log'.
 %Time-frequency resolution is defined by ncyc, the number of cycles in each

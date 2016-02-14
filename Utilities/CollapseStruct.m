@@ -1,8 +1,15 @@
 function [ structout ] = CollapseStruct( structin,dim,combine )
-%UNTITLED Summary of this function goes here
-%   Detailed explanation goes here
+%structout = CollapseStruct( structin,dim,combine ) Combines elements in a
+%structure array
 %
+%INPUT
+%   structin    struct(N).fields structure array with N elements.
+%   dim         dimension along which to combine each element in the
+%               structure array. (default: 2)
+%   (optional)
+%       combine     can take 'mean' or 'median' instead of concatenating
 %
+%       
 %%
 fields = fieldnames(structin);
 

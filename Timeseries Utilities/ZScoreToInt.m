@@ -22,7 +22,7 @@ if ~exist('sf','var')
 end
 
 
-int = int*sf;
+int = round(int*sf);
 
 int_data = [];
 for ii = 1:numints

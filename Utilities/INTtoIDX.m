@@ -1,5 +1,5 @@
 function [ IDX ] = INTtoIDX(INT,len,sf)
-%INTtoIDX(INT) Converts state on/offsets to vector of indices
+%[IDX] = INTtoIDX(INT,len,sf) Converts state on/offsets to vector of indices
 %
 %INPUT
 %   INT:    {nstates} cell array of intervals - start and end times
@@ -33,6 +33,11 @@ for ss = 1:numstates
     end
 end
 
+switch numstates
+    case 1
+        IDX = logical(IDX);
+    otherwise
+end
 
 
 end
