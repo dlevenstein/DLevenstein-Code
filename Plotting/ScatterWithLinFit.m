@@ -1,6 +1,12 @@
 function [  ] = ScatterWithLinFit( x,y,color,varargin )
 %UNTITLED Summary of this function goes here
 %   Detailed explanation goes here
+%% Options/Defaults
+
+sig = 'p0';
+corrtype = 'pearson';
+
+
 %%
 if length(x(1,:))>length(x(:,1))
     x = x';
@@ -23,10 +29,33 @@ if sum(ismember(varargin, 'RemoveOutlierX'))
     y(xoutlierind) = [];
 end
 
+%Correlation
+switch corrtype
+    case 'pearson'
+        [R,p] = corr(x,y);
+        corrtext = ['R = ',num2str(R)];
+    case 'spearman'
+        [rho,p] = corr(x,y,'type','Spearman');
+         corrtext = ['rho = ',num2str(rho)];
+end
 
-[R,p] = corr(x,y);%,'type','Spearman');
 
 
+switch sig
+    case 'p0'
+        sigtext = ['   p = ',num2str(p)];
+        
+    case 'conf'
+        %Confidence Interval
+        [pf, S] = polyfit(x,y,1);
+        % yfit = polyval(pf,ex);
+        % NB: ... "ex" is a logspace bunch of values fitting the range of the data
+        estY=polyval(pf,x); % the estimate of the 'y' value for each point.
+        SlopeCI = polyparci(pf,S,0.95);
+
+        corrtext = ['R = ',num2str(pf(1))];
+        sigtext = [' +/-',num2str(diff(SlopeCI(:,1))/2)];
+end
 
 %%
 props.color = color;
@@ -36,7 +65,7 @@ lsline
 xbouns = get(gca,'Xlim');
 ybouns = get(gca,'ylim');
 textloc = [xbouns(1),ybouns(2) - 0.1*(ybouns(2)-ybouns(1))];
-text(textloc(1),textloc(2),{['R = ',num2str(R)],['p = ',num2str(p)]},'color',props.color)
+text(textloc(1),textloc(2),{[corrtext,sigtext]},'color',props.color)
 xlim(xbouns);ylim(ybouns);
 end
 

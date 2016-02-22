@@ -12,14 +12,14 @@ function [ filt_data, power, phase ] = FiltNPhase(data,fbounds,sampfreq,varargin
 
 
 %Filter order to pass to fir1.
-%3 cycles of low bound freq
-low_bound = 1/fbounds(1);   %Low bound period
+%default: 3 cycles of low bound freq
 if nargin == 4
     num_cyc = varargin{1};
 else
-    num_cyc = 4;
+    num_cyc = 3;
 end
 
+low_bound = 1/fbounds(1);   %Low bound period
 filt_order = num_cyc*low_bound*sampfreq;    
 N = ceil(filt_order);       %order must be integer
 

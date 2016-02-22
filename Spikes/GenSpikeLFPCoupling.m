@@ -69,7 +69,7 @@ addParameter(p,'ncyc',defaultNcyc,@isnumeric)
 addParameter(p,'synchdt',defaultSynchdt,@isnumeric)
 addParameter(p,'synchwin',defaultSynchwin,@isnumeric)
 addParameter(p,'sorttype',defaultSorttype,checkSorttype)
-addParameter(p,'DOWNSAMPLE',defaultDOWN,@islogical)
+addParameter(p,'DOWNSAMPLE',defaultDOWN,@isnumeric)
 addParameter(p,'subpop',0,@isnumeric)
 
 parse(p,varargin{:})
@@ -134,8 +134,9 @@ end
 
 %Downsampling
 if p.Results.DOWNSAMPLE
+    downsamplefactor = p.Results.DOWNSAMPLE;
     sf_LFP = sf_LFP/downsamplefactor;
-    assert(sf_LFP<2*max(frange),'downsample factor is too big...')
+    assert(sf_LFP>2*max(frange),'downsample factor is too big...')
     LFP = downsample(LFP,downsamplefactor);
     t_LFP = downsample(t_LFP,downsamplefactor);%should have time vector to keep track of time...
 end

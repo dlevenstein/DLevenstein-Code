@@ -22,11 +22,6 @@ if isstring(cbounds); switch cbounds
         case 'datarange'
             display('ColorbarWithAxis does not yet have this functionality, don"t you wish it did?...')
 end; end
-
-switch scale
-    case 'log'
-    case 'lin'
-end
             
 
 caxis(cbounds);
@@ -38,8 +33,15 @@ switch labelloc
 end
 
 cb.Ticks = [cbounds(1) mean(cbounds) cbounds(2)];
-cb.TickLabels = {['< ',num2str(cbounds(1))],mean(cbounds),...
-    ['> ',num2str(cbounds(2))]};
+
+switch scale
+    case 'log'
+        cb.TickLabels = {['< ',num2str(2.^(cbounds(1)))],2.^(mean(cbounds)),...
+            ['> ',num2str(2.^(cbounds(2)))]};
+    case 'lin'
+        cb.TickLabels = {['< ',num2str(cbounds(1))],mean(cbounds),...
+            ['> ',num2str(cbounds(2))]};
+end
 
 end
 
