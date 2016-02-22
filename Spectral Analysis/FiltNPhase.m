@@ -4,14 +4,16 @@ function [ filt_data, power, phase ] = FiltNPhase(data,fbounds,sampfreq,varargin
 %Optional Arguement: filter order (num_cyc)
 %
 %TO DO:
-%   -lots
+%   -Add option for high/low pass filter instead of bandpass
+%   -Improve input parsing for optional inputs
 %
-%Last Updated: 4/7/14
+%Last Updated: 2/22/16
 %DLevenstein
+%%
 
 
-
-%Filter order to pass to fir1.
+%Filter order to pass to fir1. higher order improves frequency resolution
+%but also increases computing time substantially.
 %default: 3 cycles of low bound freq
 if nargin == 4
     num_cyc = varargin{1};
