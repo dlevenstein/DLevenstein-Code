@@ -1,6 +1,7 @@
-function [intts,sortindex,intts_sorted] = SortByIntTime(ts,ints,align)
+function [intts,sortindex,intts_sorted,overlaps] = SortByIntTime(ts,ints,align)
 %[intts,sortindex,intts_sorted] = SortByIntTime(timestamps,ints,align)
 %sorts timestamps ts by their location relative to intervals ints.
+%NOTE: as is, does not play nice with overlapping intervals
 %
 %INPUTS
 %   timestamps
@@ -12,12 +13,17 @@ function [intts,sortindex,intts_sorted] = SortByIntTime(ts,ints,align)
 %   intts       interval-relative timestamps
 %   sortindex   index for sorting timestamps by interval-relative time
 %   ints_sorted interval-relative timestamps, sorted
+%   overlaps    cell array of other intts for those with overlaps
 %
 %
-%Last Updated: 11/24/15
+%TO DO:
+%   -make play nicer with overlapping intervals
+%
+%Last Updated: 2/29/16
 %DLevenstein
 %%
 intts = NaN(size(ts));
+overlaps = cell(size(intts));
 
 if isa(ints,'intervalSet')
     ints = [Start(ints,'s'), End(ints,'s')];
@@ -37,6 +43,18 @@ for ii = 1:length(ints(:,1))
     else
         display('var align must be "offset", "onset", or "norm"')
     end
+    
+    %If any of the timestamps are already in other intervals (overlapping)
+    overlappingts = ininttimestamps(~isnan(intts(ininttimestamps)));
+    if overlappingts
+        if isempty(overlaps)
+            display('Overlapping intervals...')
+        end
+        for tt = 1:length(overlappingts)
+            overlaps{overlappingts(tt)} = [overlaps{overlappingts(tt)}, intts(overlappingts(tt))];
+        end
+    end
+        
     
     intts(ininttimestamps) = newtimestamps;    
 end

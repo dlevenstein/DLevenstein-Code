@@ -1,5 +1,5 @@
 function [freqs,synchcoupling,ratepowercorr,...
-    spikephasemag,spikephaseangle,popcellind]...
+    spikephasemag,spikephaseangle,popcellind,cellpopidx]...
     = GenSpikeLFPCoupling(spiketimes,LFP,varargin)
 % GenSpikeLFPCoupling(spiketimes,LFP)
 %
@@ -97,6 +97,11 @@ elseif isa(spiketimes,'cell') && isa(spiketimes{1},'tsdArray')
     numpop = length(spiketimes);
     lastpopnum = 0;
     for pp = 1:numpop
+        if length(spiketimes{pp})==0
+            spiketimes{pp} = {};
+            popcellind{pp} = [];
+            continue
+        end
         for cc = 1:length(spiketimes{pp})
             spiketimestemp{cc} = Range(spiketimes{pp}{cc},'s');
         end
@@ -130,6 +135,8 @@ switch subpop
         end
 end
 
+cellpopidx = zeros(1,numcells);
+
 %% Processing LFP
 
 %Downsampling
@@ -152,6 +159,8 @@ switch nfreqs
         t_LFP = IsolateEpochs2(t_LFP,int,0,sf_LFP);
         LFP_phase = cat(1,LFP_phase{:});
         LFP_power = cat(1,LFP_power{:});
+        %Normalize Power to Mean Power
+        LFP_power = LFP_power./mean(LFP_power);
         t_LFP = cat(1,t_LFP{:});
         freqs = [];
         
@@ -181,6 +190,14 @@ spikemat = cat(1,spikemat{:});
 t_synch = cat(1,t_synch{:});
 
 for pp = 1:numpop
+    if length(popcellind{pp}) == 0
+        synchcoupling(pp).powercorr = [];
+        synchcoupling(pp).phasemag = [];
+        synchcoupling(pp).phaseangle = [];
+        numpop = numpop-1;
+        continue
+    end
+    cellpopidx(popcellind{pp}) = pp;
     numpopcells = length(popcellind{pp});
     popsynch = sum(spikemat(:,popcellind{pp})>0,2)./numpopcells;
     popsynch = popsynch./mean(popsynch);
