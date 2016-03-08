@@ -4,14 +4,14 @@ function [ ratePETH,popsynchPETH,popcellind ] = GenSpikeEventPETH(spiketimes,int
 %
 %INPUT
 %   spiketimes
-%   int
+%   int             [Nint x 2]
 %   (optional)
-%       'normwin'   %Sorrounding time to add to norm (in normalized time)
-%       'synchdt'   %Synchrony dt                         (default: 0.005s)
-%       'synchwin'  %Synchrony time window                 (default: 0.04s)
-%       'twin'      %Time window around onset/offset PETH (default: [2 2]s)
-%       'dt_onoff'  %binsize for onset/offset PETH         (default: 0.05s)
-%       'normbins'  %Number of bins in the time normalized interval 0-1
+%       'normwin'   Sorrounding time to add to norm (in normalized time)
+%       'synchdt'   Synchrony dt                         (default: 0.005s)
+%       'synchwin'  Synchrony time window                 (default: 0.04s)
+%       'twin'      Time window around onset/offset PETH (default: [2 2]s)
+%       'dt_onoff'  binsize for onset/offset PETH         (default: 0.05s)
+%       'normbins'  Number of bins in the time normalized interval 0-1
 %       'sorttype'
 %       'subpop'
 %
@@ -34,7 +34,9 @@ function [ ratePETH,popsynchPETH,popcellind ] = GenSpikeEventPETH(spiketimes,int
 %
 %TO DO
 %   -...lots
+%   -allow time events instead of interval... i.e. int [Nint x 1]
 
+%DLevenstein 2016
 %% inputParse for Optional Inputs and Defaults
 p = inputParser;
 
