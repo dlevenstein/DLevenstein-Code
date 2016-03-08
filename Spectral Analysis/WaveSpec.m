@@ -56,6 +56,7 @@ end
 fmin = frange(1);
 fmax = frange(2);
 if strcmp(space,'log')
+    assert(fmin~=0,'Log-spaced frequencies cannot have min of 0')
     freqs = logspace(log10(fmin),log10(fmax),nfreqs);
 elseif strcmp(space,'lin')
     freqs = linspace(fmin,fmax,nfreqs);

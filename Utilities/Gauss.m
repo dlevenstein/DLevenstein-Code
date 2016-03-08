@@ -1,5 +1,5 @@
-function [ gauss ] = Gauss( x, mu, s )
-%GaussNorm(x,mu,s) returns a normalized gaussian with mean mu and standard 
+function [gauss] = Gauss(x,mu,s)
+%Gauss(x,mu,s) returns a normalized gaussian with mean mu and standard 
 %deviation s
 
 p1 = -.5 * ((x - mu)/s) .^ 2;   %Term in the exponent
