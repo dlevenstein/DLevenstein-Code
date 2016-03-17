@@ -4,7 +4,7 @@ function [  ] = ScatterWithLinFit( x,y,color,varargin )
 %% Options/Defaults
 
 sig = 'p0';
-corrtype = 'spearman';
+corrtype = 'pearson';
 
 
 %%
