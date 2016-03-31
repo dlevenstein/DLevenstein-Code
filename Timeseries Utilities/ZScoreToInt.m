@@ -33,5 +33,7 @@ intmean = nanmean(int_data);
 intstd = nanstd(int_data);
 
 Zdata = (data-repmat(intmean,length(data(:,1)),1))./repmat(intstd,length(data(:,1)),1);
+
+
 end
 

@@ -1,4 +1,4 @@
-function [MUAhist,t_hist,histbins,MUAhist_sm,sm_histbins,MUA,t_spkmat] = SlidingMUADist(cellspikes,histparms,T)
+function [MUAhist,t_hist,histbins,MUA,t_spkmat] = SlidingMUADist(cellspikes,histparms,T)
 %[MUAhist,t_hist,histbins,MUAhist_sm,sm_histbins] = SlidingMUADist(cellspikes,histparms,T)
 %
 %INPUTS
@@ -41,15 +41,15 @@ dt_hist = histparms.dt_hist;
 dt_MUA = histparms.dt_MUA;
 winlength = histparms.winlength;
 spkbinsize = histparms.spkbinsize;
-smoothwin = histparms.smoothwin;
-histsmbins = histparms.histsmbins;
+%smoothwin = histparms.smoothwin;
+%histsmbins = histparms.histsmbins;
 
 tfact= round(dt_hist/dt_MUA);
 
 numcells = length(cellspikes);
 
 numwinbins = ceil(winlength/dt_MUA);
-span_smoothMUA = ceil(smoothwin/dt_MUA);
+%span_smoothMUA = ceil(smoothwin/dt_MUA);
 %%
 % load('Database/BWData/BWRat19_032513/BWRat19_032513_SSubtypes.mat')
 % load('Database/BWData/BWRat19_032513/BWRat19_032513_GoodSleepInterval.mat')
@@ -76,13 +76,13 @@ t_spkmat = t_spkmat-0.5*dt_MUA;
 
 %Don't double the same cell spiking in a window
 %FOR PERC CELLS
-%spikemat = spikemat>0;
+spikemat = spikemat>0;
 MUA = sum(spikemat,2)/numcells;
 %FOR FR
 
 
 
-MUA = smooth(MUA,span_smoothMUA);
+%MUA = smooth(MUA,span_smoothMUA);
 
 histwins = repmat(MUA,1,numwinbins);
 for w = 1:numwinbins
@@ -101,25 +101,25 @@ histbins = linspace(0,1,rawhistbins);
 
 %histbins = linspace(0,max(MUA),20);
 
-sm_histbins = linspace(0,1,histsmbins*rawhistbins);
+%sm_histbins = linspace(0,1,histsmbins*rawhistbins);
 % nhistbins = 1000;
 % binscale = nhistbins/rawhistbins;
 
 t_hist = t_spkmat(1:tfact:end);
 MUAhist = hist(histwins(1:tfact:end,:)',histbins)'./numwinbins;
-MUAhist_sm = hist(histwins(1:tfact:end,:)',sm_histbins)'*histsmbins;
-for i_t = 1:length(t_hist)
-    MUAhist_sm(i_t,:) = smooth(MUAhist_sm(i_t,:),2*histsmbins);
-% 
-%     tol = 0.0001;
-%     newhist = [1 1];
-%     while length(newhist) ~= nhistbins
-%         [P,Q] = rat(binscale,tol);
-%         newhist = resample(EMUAhist(i_t,:),P,Q,'linear');
-%         tol = tol/10;
-%     end
-%     EMUAhist(i_t,:) = newhist;
-end
+% MUAhist_sm = hist(histwins(1:tfact:end,:)',sm_histbins)'*histsmbins;
+% for i_t = 1:length(t_hist)
+%     MUAhist_sm(i_t,:) = smooth(MUAhist_sm(i_t,:),2*histsmbins);
+% % 
+% %     tol = 0.0001;
+% %     newhist = [1 1];
+% %     while length(newhist) ~= nhistbins
+% %         [P,Q] = rat(binscale,tol);
+% %         newhist = resample(EMUAhist(i_t,:),P,Q,'linear');
+% %         tol = tol/10;
+% %     end
+% %     EMUAhist(i_t,:) = newhist;
+% end
 
 
 % if isfield(histparms,'numbins')

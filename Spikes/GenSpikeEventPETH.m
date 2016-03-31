@@ -1,4 +1,4 @@
-function [ ratePETH,popsynchPETH,popcellind ] = GenSpikeEventPETH(spiketimes,int,varargin)
+function [ ratePETH,popsynchPETH,popcellind,cellpopidx ] = GenSpikeEventPETH(spiketimes,int,varargin)
 %UNTITLED Summary of this function goes here
 %   Detailed explanation goes here
 %
@@ -183,9 +183,10 @@ ratePETH.cellpopidx = zeros(1,numcells);
 overlap = synchwin/synchdt;
 [spikemat,t_synch] = SpktToSpkmat(spiketimes, [], synchdt,overlap);
 
-
+cellpopidx = zeros(1,numcells);
 for pp = 1:numpop
-    if length(popcellind{pp}) == 0
+    cellpopidx(popcellind{pp}) = pp;
+    if length(popcellind{pp}) == 0 | isempty(int)
 
         popsynchPETH(pp).t_norm = ratePETH.t_norm;
         popsynchPETH(pp).norm = nan(size(popsynchPETH(pp).t_norm));
@@ -216,6 +217,14 @@ for pp = 1:numpop
     popsynchPETH(pp).offset = mean(cat(2,popsynch_offepochs{:}),2);
     popsynchPETH(pp).t_off = [-twin(2):synchdt:twin(1)]';
 end
+
+if isempty(int)
+    ratePETH.norm = nan(size(ratePETH.norm));
+    ratePETH.onset = nan(size(ratePETH.onset));
+    ratePETH.offset = nan(size(ratePETH.offset));
+end
+
+
 
 %% Figure
 figure
