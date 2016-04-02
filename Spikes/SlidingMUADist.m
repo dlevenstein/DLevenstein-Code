@@ -24,6 +24,7 @@ function [MUAhist,t_hist,histbins,MUA,t_spkmat] = SlidingMUADist(cellspikes,hist
 %   -might want to make it so raw hist is not smoothed in time as well...
 %   but MUAhist_sm is?
 %   -Boxcar for MUA...
+%   -Add option for rate or synchrony
 %
 %Updated 9/27/15.... did a lot of sloppy stuff.  Sorry future me :(
 %DLevenstein

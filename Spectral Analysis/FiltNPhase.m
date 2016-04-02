@@ -34,7 +34,7 @@ B = fir1(N,Wn);                 %Designs an N'th order lowpass FIR digital
 
 %Filter data and get phase using Hilbert transform
 filt_data = filtfilt(B,1,data);
-power = abs(hilbert(filt_data));
+power = abs(hilbert(filt_data)).^2;
 phase = angle(hilbert(filt_data));
 
 end
