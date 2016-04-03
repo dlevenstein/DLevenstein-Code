@@ -15,10 +15,11 @@ function [ ISImap,ISIdensity,ISIhist,histbins ] = SpktToISIMap( spiketimes,int )
 %
 %DLevenstein 2016
 %%
-spiketimes = Se;
-int = SWSPacketInts;
-int = REMInts;
+%spiketimes = Se;
+%int = [End(SWSPacketInts,'s')-20 End(SWSPacketInts,'s')];
+%int = REMInts;
 %int = StateIntervals.Spindles;
+SHOWFIG = false;
 %%
 numcells = length(spiketimes);
 if numcells == 0
@@ -45,7 +46,7 @@ ISInp1 = cellfun(@(X) X(2:end),ISIs,'UniformOutput',false);
 [ISIt,keepidx] = cellfun(@(X) RestrictInts(X,int),ISIt,'UniformOutput',false);
 ISIn = cellfun(@(X,Y) X(Y),ISIn,keepidx,'UniformOutput',false);
 ISInp1 = cellfun(@(X,Y) X(Y),ISInp1,keepidx,'UniformOutput',false);
-
+ISImap = cellfun(@(X,Y) [X Y],ISIn,ISInp1,'UniformOutput',false);
 %%
 numbins = 30;
 histbins = linspace(-2.5,1.5,numbins);
@@ -58,52 +59,53 @@ numspikes = cellfun(@length,ISIn);
 
 
 %%
-for cc = 1:numcells
-cellnum = sortrate(cc);
-subidx = mod(cc-1,10)+1;
-histoffset = 20;
-if subidx == 1
-figure
-end
-if subidx > 5
-    subidx = subidx+10;
-    histoffset = 10;
-end
-   subplot(5,5,subidx)
-        imagesc(histbins,histbins,ISIdensity{cellnum})
-        axis xy
-        hold on
-        plot(log10(1/10.*[1 1]),get(gca,'ylim'),'r--')
-        plot(log10(1/20.*[1 1]),get(gca,'ylim'),'r--')
-        plot(get(gca,'xlim'),log10(1/10.*[1 1]),'r--')
-        plot(get(gca,'xlim'),log10(1/20.*[1 1]),'r--')
-        LogScale('xy',10)
-        ylabel('ISI n+1 (s)')
-        xlim(histbins([1 end])+[-0.05 0.05]);ylim(histbins([1 end])+[-0.05 0.05])
-   subplot(5,5,5+subidx)
-        plot(log10(ISIn{cellnum}),log10(ISInp1{cellnum}),'.')
-        hold on
-        plot(log10(1/10.*[1 1]),get(gca,'ylim'),'r--')
-        plot(log10(1/20.*[1 1]),get(gca,'ylim'),'r--')
-        plot(get(gca,'xlim'),log10(1/10.*[1 1]),'r--')
-        plot(get(gca,'xlim'),log10(1/20.*[1 1]),'r--')
-        LogScale('xy',10)
-        ylabel('ISI n+1 (s)')
-        xlim(histbins([1 end])+[-0.05 0.05]);ylim(histbins([1 end])+[-0.05 0.05])
-   subplot(10,5,histoffset+subidx)
-        bar(histbins,ISIhist{cellnum})
-        hold on
-        plot(log10(1/10.*[1 1]),get(gca,'ylim'),'r--')
-        plot(log10(1/20.*[1 1]),get(gca,'ylim'),'r--')
-        plot(get(gca,'xlim'),log10(1/10.*[1 1]),'r--')
-        plot(get(gca,'xlim'),log10(1/20.*[1 1]),'r--')
-        LogScale('x',10)
-        xlim(histbins([1 end])+[-0.05 0.05]);
-        xlabel('ISI n (s)');ylabel('ISI n+1 (s)')
-        ylim([0 max(ISIhist{cellnum})])
-    
-end      
+if SHOWFIG
+    for cc = 1:numcells
+    cellnum = sortrate(cc);
+    subidx = mod(cc-1,10)+1;
+    histoffset = 20;
+    if subidx == 1
+    figure
+    end
+    if subidx > 5
+        subidx = subidx+10;
+        histoffset = 10;
+    end
+       subplot(5,5,subidx)
+            imagesc(histbins,histbins,ISIdensity{cellnum})
+            axis xy
+            hold on
+            plot(log10(1/10.*[1 1]),get(gca,'ylim'),'r--')
+            plot(log10(1/20.*[1 1]),get(gca,'ylim'),'r--')
+            plot(get(gca,'xlim'),log10(1/10.*[1 1]),'r--')
+            plot(get(gca,'xlim'),log10(1/20.*[1 1]),'r--')
+            LogScale('xy',10)
+            ylabel('ISI n+1 (s)')
+            xlim(histbins([1 end])+[-0.05 0.05]);ylim(histbins([1 end])+[-0.05 0.05])
+       subplot(5,5,5+subidx)
+            plot(log10(ISIn{cellnum}),log10(ISInp1{cellnum}),'.')
+            hold on
+            plot(log10(1/10.*[1 1]),get(gca,'ylim'),'r--')
+            plot(log10(1/20.*[1 1]),get(gca,'ylim'),'r--')
+            plot(get(gca,'xlim'),log10(1/10.*[1 1]),'r--')
+            plot(get(gca,'xlim'),log10(1/20.*[1 1]),'r--')
+            LogScale('xy',10)
+            ylabel('ISI n+1 (s)')
+            xlim(histbins([1 end])+[-0.05 0.05]);ylim(histbins([1 end])+[-0.05 0.05])
+       subplot(10,5,histoffset+subidx)
+            bar(histbins,ISIhist{cellnum})
+            hold on
+            plot(log10(1/10.*[1 1]),get(gca,'ylim'),'r--')
+            plot(log10(1/20.*[1 1]),get(gca,'ylim'),'r--')
+            plot(get(gca,'xlim'),log10(1/10.*[1 1]),'r--')
+            plot(get(gca,'xlim'),log10(1/20.*[1 1]),'r--')
+            LogScale('x',10)
+            xlim(histbins([1 end])+[-0.05 0.05]);
+            xlabel('ISI n (s)');ylabel('ISI n+1 (s)')
+            ylim([0 max(ISIhist{cellnum})])
 
+    end      
+end
 
 end
 
