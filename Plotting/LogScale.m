@@ -1,6 +1,17 @@
 function [] = LogScale( whichaxis,logbase)
-%UNTITLED Summary of this function goes here
-%   Detailed explanation goes here
+%LogScale(whichaxis,logbase) renames the tick labels on your axes for a
+%logarithmically scaled variable.
+%
+%INPUT
+%   whichaxis   which axis did you log scale (can be 'x' 'y' or 'xy')
+%   logbase     base of the logarithm you used for your points (ex 10)
+%
+%EXAMPLE
+%   plot(log10(Xvals),Yvals)
+%   LogScale('x',10)
+%
+%DLevenstein 2015
+%%
 
 if strcmp(whichaxis,'y') || strcmp(whichaxis,'xy')
     range = get(gca,'YLim');
