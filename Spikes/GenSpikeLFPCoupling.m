@@ -28,11 +28,10 @@ function [freqs,synchcoupling,ratepowercorr,...
 %   synchpower
 %   synchphasemag
 %   synchphaseang
-%   p values for everything?
+%   spikephasesig
 %
 %TO DO
 %   -Put synch/spikerate in same section
-%   -jittered/thinned control
 %   -multiple ints - this (along with controls) will require making
 %   subfunctions to loop
 %
@@ -245,7 +244,7 @@ spikephaseangle = spikephaseangle';
 numjitt = 100;
 jitterbuffer = zeros(numcells,nfreqs,numjitt);
 jitterwin = 1/frange(1);
-tic
+%tic
 for jj = 1:numjitt
     if mod(jj,10) == 1
         display(['Jitter ',num2str(jj),' of ',num2str(numjitt)])
@@ -253,7 +252,7 @@ for jj = 1:numjitt
     jitterspikes = JitterSpiketimes(spiketimes,jitterwin);
     jitterbuffer(:,:,jj) = cellfun(@(X) spkphase(X),jitterspikes);
 end
-toc
+%toc
 jittermean = mean(jitterbuffer,3);
 jitterstd = std(jitterbuffer,[],3);
 spikephasesig = (spikephasemag-jittermean)./jitterstd;
