@@ -240,8 +240,7 @@ power4rate = interp1(t_LFP,LFP_power,t_rate,'nearest');
 spikephasemag = zeros(numcells,nfreqs);
 spikephaseangle = zeros(numcells,nfreqs);
 spikephasesig = zeros(numcells,nfreqs);
-numjitt = 100;
-jitterwin = 1/frange(1);
+    numjitt = 100;
 for cc = 1:numcells
     %Take only spike times in intervals
     cellspikes{cc} = spiketimes{cc}(InIntervals(spiketimes{cc},int));
@@ -256,7 +255,7 @@ for cc = 1:numcells
     %Jitter Significance
     jitterbuffer = zeros(numjitt,nfreqs);
     for jj = 1:numjitt
-        jitterspikes = JitterSpiketimes({cellspikes{cc}},jitterwin);
+        jitterspikes = JitterSpiketimes(cellspikes{cc},jitterwin);
         
         %Find phase and power at the closest LFP timepoint to each spike.
         phase4spike = interp1(t_LFP,LFP_phase,cellspikes{cc},'nearest');
@@ -268,7 +267,7 @@ for cc = 1:numcells
     end
     jittermean = mean(jitterbuffer,1);
     jitterstd = std(jitterbuffer,1);
-    spikephasesig(cc,:) = (spikephasemag(cc,:)-jittermean)./jitterstd;
+    spikephasesig(cc,:) = (spikephasemag(cc,:)-jittermean)./jitterstd);
     
 end
 

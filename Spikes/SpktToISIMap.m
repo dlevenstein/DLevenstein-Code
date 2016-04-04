@@ -1,4 +1,4 @@
-function [ ISImap,ISIdensity,ISIhist,histbins ] = SpktToISIMap( spiketimes,int )
+function [ ISImap,ISIdensity,ISIhist,histbins ] = SpktToISIMap(spiketimes,varargin )
 %[ ISImap,ISIdensity,ISIhist,autocorr ] = SpktToISIMap( spiketimes,int )
 %returns the ISImap and other ISI statistics from the spike times of a set
 %of cells, with the option to only look at spikes in a given interval
@@ -19,22 +19,66 @@ function [ ISImap,ISIdensity,ISIhist,histbins ] = SpktToISIMap( spiketimes,int )
 %int = [End(SWSPacketInts,'s')-20 End(SWSPacketInts,'s')];
 %int = REMInts;
 %int = StateIntervals.Spindles;
-SHOWFIG = false;
+%% Optional input arguments
+p = inputParser;
+
+defaultInts = [0 Inf];
+checkInts = @(x) size(x,2) == 2 || isa(x,'intervalSet');
+
+defaultSHOWFIG = false;
+
+
+addParameter(p,'showfig',defaultSHOWFIG,@islogical)
+addParameter(p,'ints',defaultInts,checkInts)
+
+parse(p,varargin{:})
+%Clean up this junk...
+SHOWFIG = p.Results.showfig; 
+int = p.Results.ints;
 %%
 numcells = length(spiketimes);
+%% Deal with Input Types
 if numcells == 0
     display('case no cells needs outputs')
     pause
     return
 end
 
+%Spiketimes can be: tsdArray of cells, cell array of cells, cell array of
+%tsdArrays (multiple populations)
 if isa(spiketimes,'tsdArray')
-    for c = 1:numcells
-        spiketimestemp{c} = Range(spiketimes{c},'s');
+    numcells = length(spiketimes);
+    for cc = 1:numcells
+        spiketimestemp{cc} = Range(spiketimes{cc},'s');
     end
     spiketimes = spiketimestemp;
     clear spiketimestemp
+elseif isa(spiketimes,'cell') && isa(spiketimes{1},'tsdArray')
+    numpop = length(spiketimes);
+    lastpopnum = 0;
+    for pp = 1:numpop
+        if length(spiketimes{pp})==0
+            spiketimes{pp} = {};
+            popcellind{pp} = [];
+            continue
+        end
+        for cc = 1:length(spiketimes{pp})
+            spiketimestemp{cc} = Range(spiketimes{pp}{cc},'s');
+        end
+        spiketimes{pp} = spiketimestemp;
+        popcellind{pp} = [1:length(spiketimes{pp})]+lastpopnum;
+        lastpopnum = popcellind{pp}(end);
+        clear spiketimestemp
+    end
+    spiketimes = cat(2,spiketimes{:});
+    numcells = length(spiketimes);
+    subpop = 'done';
 end
+
+if isa(int,'intervalSet')
+    int = [Start(int,'s'), End(int,'s')];
+end
+
 
 %%
 ISIs = cellfun(@diff,spiketimes,'UniformOutput',false);
@@ -52,14 +96,14 @@ numbins = 30;
 histbins = linspace(-2.5,1.5,numbins);
 ISIhist = cellfun(@(X) hist(log10(X),histbins),ISIn,'UniformOutput',false);
 ISIdensity = cellfun(@(X,Y) hist3(log10([X,Y]),{histbins,histbins}),ISIn,ISInp1,'UniformOutput',false);
-%% Sort by firing rate in interval
-numspikes = cellfun(@length,ISIn);
-[~,sortrate] = sort(numspikes);
-
-
+ISIdensity = cat(3,ISIdensity{:});
+ISIhist = cat(1,ISIhist{:});
 
 %%
 if SHOWFIG
+    numspikes = cellfun(@length,ISIn);
+    [~,sortrate] = sort(numspikes);
+    
     for cc = 1:numcells
     cellnum = sortrate(cc);
     subidx = mod(cc-1,10)+1;

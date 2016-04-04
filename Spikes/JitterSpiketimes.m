@@ -12,6 +12,8 @@ if isa(spiketimes,'tsdArray')
     clear spiketimestemp
 end
 
+
+%Do this with cellfun....
 for c = 1:numcells
     spiketimes{c} = spiketimes{c}+2*jitterwin*rand(size(spiketimes{c}))-jitterwin;
 end
