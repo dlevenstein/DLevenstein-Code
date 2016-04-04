@@ -237,40 +237,44 @@ power4rate = interp1(t_LFP,LFP_power,t_rate,'nearest');
 %% Spike-Phase Coupling
 %Pull the spike times out of the tsObject - can fix this later or whatever.
 
-spikephasemag = zeros(numcells,nfreqs);
-spikephaseangle = zeros(numcells,nfreqs);
-spikephasesig = zeros(numcells,nfreqs);
+
+[spikephasemag,spikephaseangle] = cellfun(@(X) spkphase(X),spiketimes);
+spikephasemag = spikephasemag';
+spikephaseangle = spikephaseangle';
+
 numjitt = 100;
+jitterbuffer = zeros(numcells,nfreqs,numjitt);
 jitterwin = 1/frange(1);
-for cc = 1:numcells
+tic
+for jj = 1:numjitt
+    if mod(jj,10) == 1
+        display(['Jitter ',num2str(jj),' of ',num2str(numjitt)])
+    end
+    jitterspikes = JitterSpiketimes(spiketimes,jitterwin);
+    jitterbuffer(:,:,jj) = cellfun(@(X) spkphase(X),jitterspikes);
+end
+toc
+jittermean = mean(jitterbuffer,3);
+jitterstd = std(jitterbuffer,[],3);
+spikephasesig = (spikephasemag-jittermean)./jitterstd;
+
+
+
+%Spike-Phase Coupling function
+function [phmag,phangle] = spkphase(spktimes_fn)
     %Take only spike times in intervals
-    cellspikes{cc} = spiketimes{cc}(InIntervals(spiketimes{cc},int));
+    spktimes_fn = spktimes_fn(InIntervals(spktimes_fn,int));
     %Find phase and power at the closest LFP timepoint to each spike.
-    phase4spike = interp1(t_LFP,LFP_phase,cellspikes{cc},'nearest');
-    power4spikephase = interp1(t_LFP,LFP_power,cellspikes{cc},'nearest');
+    phase4spike = interp1(t_LFP,LFP_phase,spktimes_fn,'nearest');
+    power4spikephase = interp1(t_LFP,LFP_power,spktimes_fn,'nearest');
     %Calculate (power normalized) resultant vector
     resultvect = nanmean(power4spikephase.*exp(1i.*phase4spike),1);
-    spikephasemag(cc,:) = abs(resultvect);
-    spikephaseangle(cc,:) = angle(resultvect);
-    
-    %Jitter Significance
-    jitterbuffer = zeros(numjitt,nfreqs);
-    for jj = 1:numjitt
-        jitterspikes = JitterSpiketimes({cellspikes{cc}},jitterwin);
-        
-        %Find phase and power at the closest LFP timepoint to each spike.
-        phase4spike = interp1(t_LFP,LFP_phase,cellspikes{cc},'nearest');
-        power4spikephase = interp1(t_LFP,LFP_power,cellspikes{cc},'nearest');
-        %Calculate (power normalized) resultant vector
-        resultvect = nanmean(power4spikephase.*exp(1i.*phase4spike),1);
-        jitterbuffer(jj,:) = abs(resultvect);
-
-    end
-    jittermean = mean(jitterbuffer,1);
-    jitterstd = std(jitterbuffer,1);
-    spikephasesig(cc,:) = (spikephasemag(cc,:)-jittermean)./jitterstd;
-    
+    phmag = abs(resultvect);
+    phangle = angle(resultvect);
 end
+
+
+
 
 %% Sorting (and other plot-related things)
 switch p.Results.sorttype
@@ -289,7 +293,7 @@ switch p.Results.sorttype
         [~,spikephasesort] = sort(cellphasemag(:,fidx));
         sortname = [num2str(sortf) 'Hz Magnitude'];
     case 'rate'
-        spkrt = cellfun(@length,cellspikes);
+        spkrt = cellfun(@length,spiketimes);
         [~,spikepowersort] = sort(spkrt);
         spikephasesort = spikepowersort;
         sortname = 'Firing Rate';
@@ -394,5 +398,9 @@ figure
         
         
 
- end
+end
+
+end
+
+
 
