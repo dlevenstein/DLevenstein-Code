@@ -220,7 +220,7 @@ for pp = 1:numpop
 end
 
 %% Calculate Cell Rate-Power Correlation
-ratedt = round(1/max(frange),2);
+ratedt = round(1/max(frange),3);
 [spikemat,t_rate] = SpktToSpkmat(spiketimes, [], ratedt,2);
 
 spikemat = IsolateEpochs2(spikemat,int,0,1/ratedt);
@@ -238,9 +238,11 @@ power4rate = interp1(t_LFP,LFP_amp,t_rate,'nearest');
 %Pull the spike times out of the tsObject - can fix this later or whatever.
 
 
-[spikephasemag,spikephaseangle] = cellfun(@(X) spkphase(X),spiketimes);
-spikephasemag = spikephasemag';
-spikephaseangle = spikephaseangle';
+
+[spikephasemag,spikephaseangle] = cellfun(@(X) spkphase(X),spiketimes,...
+    'UniformOutput',false);
+spikephasemag = cat(1,spikephasemag{:});
+spikephaseangle = cat(1,spikephaseangle{:});
 
 
 %Spike-Phase Coupling function
@@ -282,7 +284,8 @@ for jj = 1:numjitt
         display(['Jitter ',num2str(jj),' of ',num2str(numjitt)])
     end
     jitterspikes = JitterSpiketimes(spiketimes,jitterwin);
-    jitterbuffer(:,:,jj) = cellfun(@(X) spkphase(X),jitterspikes);
+    phmagjitt = cellfun(@(X) spkphase(X),jitterspikes,'UniformOutput',false);
+    jitterbuffer(:,:,jj) = cat(1,phmagjitt{:});
 end
 %toc
 jittermean = mean(jitterbuffer,3);
