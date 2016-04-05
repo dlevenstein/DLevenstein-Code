@@ -27,14 +27,18 @@ checkInts = @(x) size(x,2) == 2 || isa(x,'intervalSet');
 
 defaultSHOWFIG = false;
 
+defaultNumbins = 30;
+
 
 addParameter(p,'showfig',defaultSHOWFIG,@islogical)
 addParameter(p,'ints',defaultInts,checkInts)
+addParameter(p,'numbins',defaultNumbins,@isnumeric)
 
 parse(p,varargin{:})
 %Clean up this junk...
 SHOWFIG = p.Results.showfig; 
 int = p.Results.ints;
+numbins = p.Results.numbins;
 %%
 numcells = length(spiketimes);
 %% Deal with Input Types
@@ -92,7 +96,6 @@ ISIn = cellfun(@(X,Y) X(Y),ISIn,keepidx,'UniformOutput',false);
 ISInp1 = cellfun(@(X,Y) X(Y),ISInp1,keepidx,'UniformOutput',false);
 ISImap = cellfun(@(X,Y) [X Y],ISIn,ISInp1,'UniformOutput',false);
 %%
-numbins = 30;
 histbins = linspace(-2.5,1.5,numbins);
 ISIhist = cellfun(@(X) hist(log10(X),histbins),ISIn,'UniformOutput',false);
 ISIdensity = cellfun(@(X,Y) hist3(log10([X,Y]),{histbins,histbins}),ISIn,ISInp1,'UniformOutput',false);
