@@ -1,5 +1,6 @@
 function [freqs,synchcoupling,ratepowercorr,...
-    spikephasemag,spikephaseangle,popcellind,cellpopidx,spikephasesig]...
+    spikephasemag,spikephaseangle,popcellind,cellpopidx,...
+    spikephasesig,ratepowersig]...
     = GenSpikeLFPCoupling(spiketimes,LFP,varargin)
 % GenSpikeLFPCoupling(spiketimes,LFP)
 %
@@ -151,15 +152,15 @@ end
 switch nfreqs  
     case 1
         
-        [~,LFP_power,LFP_phase] = FiltNPhase(LFP,frange,sf_LFP,ncyc);
+        [~,LFP_amp,LFP_phase] = FiltNPhase(LFP,frange,sf_LFP,ncyc);
         
-        LFP_power = IsolateEpochs2(LFP_power,int,0,sf_LFP);
+        LFP_amp = IsolateEpochs2(LFP_amp,int,0,sf_LFP);
         LFP_phase = IsolateEpochs2(LFP_phase,int,0,sf_LFP);
         t_LFP = IsolateEpochs2(t_LFP,int,0,sf_LFP);
         LFP_phase = cat(1,LFP_phase{:});
-        LFP_power = cat(1,LFP_power{:});
+        LFP_amp = cat(1,LFP_amp{:});
         %Normalize Power to Mean Power
-        LFP_power = LFP_power./mean(LFP_power);
+        LFP_amp = LFP_amp./mean(LFP_amp);
         t_LFP = cat(1,t_LFP{:});
         freqs = [];
         
@@ -168,14 +169,14 @@ switch nfreqs
         LFP = IsolateEpochs2(LFP,int,0,sf_LFP);
         t_LFP = IsolateEpochs2(t_LFP,int,0,sf_LFP);
 
-        [freqs,~,LFP_power] = WaveSpec(LFP,frange,nfreqs,ncyc,1/sf_LFP,'log');
-        LFP_power = cat(2,LFP_power{:})';
+        [freqs,~,LFP_amp] = WaveSpec(LFP,frange,nfreqs,ncyc,1/sf_LFP,'log');
+        LFP_amp = cat(2,LFP_amp{:})';
         t_LFP = cat(1,t_LFP{:});
 
-        LFP_phase = angle(LFP_power);
-        LFP_power = abs(LFP_power);
+        LFP_phase = angle(LFP_amp);
+        LFP_amp = abs(LFP_amp);
         %Normalize power to mean power for each frequency
-        LFP_power = bsxfun(@(X,Y) X./Y,LFP_power,nanmean(LFP_power,1));
+        LFP_amp = bsxfun(@(X,Y) X./Y,LFP_amp,nanmean(LFP_amp,1));
 end
         
 %% Calculate Population Synchrony Coupling
@@ -203,7 +204,7 @@ for pp = 1:numpop
     %% Population Synchrony-Power/Phase Coupling and Rate-Power Coupling
     %Find phase and power at the closest LFP timepoint to the synch timepoint. 
     %Deals with different dt issue.
-    power4synch = interp1(t_LFP,LFP_power,t_synch,'nearest');
+    power4synch = interp1(t_LFP,LFP_amp,t_synch,'nearest');
     phase4synch = interp1(t_LFP,LFP_phase,t_synch,'nearest');
 
     %Calculate Synchrony-Power Coupling as correlation between synchrony and
@@ -227,10 +228,10 @@ t_rate = IsolateEpochs2(t_rate,int,0,1/ratedt);
 spikemat = cat(1,spikemat{:});
 t_rate = cat(1,t_rate{:});
 
-power4rate = interp1(t_LFP,LFP_power,t_rate,'nearest');
+power4rate = interp1(t_LFP,LFP_amp,t_rate,'nearest');
 
 %Spike-Power Coupling
-[ratepowercorr] = corr(spikemat,power4rate,'type','spearman','rows','complete');
+[ratepowercorr,ratepowersig] = corr(spikemat,power4rate,'type','spearman','rows','complete');
 
 
 %% Spike-Phase Coupling
@@ -241,6 +242,37 @@ power4rate = interp1(t_LFP,LFP_power,t_rate,'nearest');
 spikephasemag = spikephasemag';
 spikephaseangle = spikephaseangle';
 
+
+%Spike-Phase Coupling function
+function [phmag,phangle] = spkphase(spktimes_fn)
+    %Take only spike times in intervals
+    spktimes_fn = spktimes_fn(InIntervals(spktimes_fn,int));
+    %Find phase and power at the closest LFP timepoint to each spike.
+    phase4spike = interp1(t_LFP,LFP_phase,spktimes_fn,'nearest');
+    power4spikephase = interp1(t_LFP,LFP_amp,spktimes_fn,'nearest');
+    %Calculate (power normalized) resultant vector
+    rvect = nanmean(power4spikephase.*exp(1i.*phase4spike),1);
+    phmag = abs(rvect);
+    phangle = angle(rvect);
+    
+    %% Example Figure : Phase-Coupling
+%     if phmag >0.1
+%     figure
+%             rose(phase4spike)
+%            % set(gca,'ytick',[])
+%             hold on
+%              polar(phase4spike,power4spikephase.*40,'k.')
+%             % hold on
+%              %compass([0 phangle],[0 phmag],'r')
+%              compass(rvect.*700,'r')
+%         delete(findall(gcf,'type','text'));
+%         % delete the text objects
+%     end
+   
+         
+end
+
+%Jitter for Significane
 numjitt = 100;
 jitterbuffer = zeros(numcells,nfreqs,numjitt);
 jitterwin = 1/frange(1);
@@ -257,22 +289,16 @@ jittermean = mean(jitterbuffer,3);
 jitterstd = std(jitterbuffer,[],3);
 spikephasesig = (spikephasemag-jittermean)./jitterstd;
 
-
-
-%Spike-Phase Coupling function
-function [phmag,phangle] = spkphase(spktimes_fn)
-    %Take only spike times in intervals
-    spktimes_fn = spktimes_fn(InIntervals(spktimes_fn,int));
-    %Find phase and power at the closest LFP timepoint to each spike.
-    phase4spike = interp1(t_LFP,LFP_phase,spktimes_fn,'nearest');
-    power4spikephase = interp1(t_LFP,LFP_power,spktimes_fn,'nearest');
-    %Calculate (power normalized) resultant vector
-    resultvect = nanmean(power4spikephase.*exp(1i.*phase4spike),1);
-    phmag = abs(resultvect);
-    phangle = angle(resultvect);
-end
-
-
+%% Example Figure : Phase-Coupling Significance
+% cc = 6;
+% figure
+%     hist(squeeze(jitterbuffer(cc,:,:)),10)
+%     hold on
+%     plot(spikephasemag(cc).*[1 1],get(gca,'ylim')./4,'r','LineWidth',2)
+%     plot(spikephasemag(cc),get(gca,'ylim')./4,'ro','LineWidth',2)
+%     xlabel('pMRL')
+%     ylabel('Number of Jitters')
+%     xlim([0 0.2])
 
 
 %% Sorting (and other plot-related things)

@@ -1,4 +1,4 @@
-function [ filt_data, power, phase ] = FiltNPhase(data,fbounds,sampfreq,varargin)
+function [ filt_data, amp, phase ] = FiltNPhase(data,fbounds,sampfreq,varargin)
 %[filt_data,power,phase] = FiltNPhase(data,fbounds,sampfreq)
 %
 %Optional Arguement: filter order (num_cyc)
@@ -34,7 +34,7 @@ B = fir1(N,Wn);                 %Designs an N'th order lowpass FIR digital
 
 %Filter data and get phase using Hilbert transform
 filt_data = filtfilt(B,1,data);
-power = abs(hilbert(filt_data)).^2;
+amp = abs(hilbert(filt_data));
 phase = angle(hilbert(filt_data));
 
 end
