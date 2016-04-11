@@ -37,7 +37,7 @@ binedges(end) = Inf;
 for f_i = 1:numbins
     for f_j = 1:numbins
         corrs = paircorrs(ival>=binedges(f_i) & ival<=binedges(f_i+1) & jval>=binedges(f_j) & jval<=binedges(f_j+1));
-        corrbin.mean(f_i,f_j) = nanmean(corrs);
+        corrbin.mean(f_i,f_j) = nanmedian(corrs);
         corrbin.std(f_i,f_j) = nanstd(corrs);
         corrbin.num(f_i,f_j) = numel(corrs(~isnan(corrs)));
     end

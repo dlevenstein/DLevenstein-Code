@@ -32,12 +32,43 @@ if numcells == 0
     return
 end
 
+% if isa(spiketimes,'tsdArray')
+%     for c = 1:numcells
+%         spiketimestemp{c} = Range(spiketimes{c},'s');
+%     end
+%     spiketimes = spiketimestemp;
+%     clear spiketimestemp
+% end
+
+%Spiketimes can be: tsdArray of cells, cell array of cells, cell array of
+%tsdArrays (multiple populations)
 if isa(spiketimes,'tsdArray')
-    for c = 1:numcells
-        spiketimestemp{c} = Range(spiketimes{c},'s');
+    numcells = length(spiketimes);
+    for cc = 1:numcells
+        spiketimestemp{cc} = Range(spiketimes{cc},'s');
     end
     spiketimes = spiketimestemp;
     clear spiketimestemp
+elseif isa(spiketimes,'cell') && isa(spiketimes{1},'tsdArray')
+    numpop = length(spiketimes);
+    lastpopnum = 0;
+    for pp = 1:numpop
+        if length(spiketimes{pp})==0
+            spiketimes{pp} = {};
+            popcellind{pp} = [];
+            continue
+        end
+        for cc = 1:length(spiketimes{pp})
+            spiketimestemp{cc} = Range(spiketimes{pp}{cc},'s');
+        end
+        spiketimes{pp} = spiketimestemp;
+        popcellind{pp} = [1:length(spiketimes{pp})]+lastpopnum;
+        lastpopnum = popcellind{pp}(end);
+        clear spiketimestemp
+    end
+    spiketimes = cat(2,spiketimes{:});
+    numcells = length(spiketimes);
+    subpop = 'done';
 end
 
 if length(T) == 1

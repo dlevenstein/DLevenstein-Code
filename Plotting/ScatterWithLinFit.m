@@ -3,7 +3,7 @@ function [  ] = ScatterWithLinFit( x,y,color,varargin )
 %   Detailed explanation goes here
 %% Options/Defaults
 
-sig = 'p0';
+sig = 'none';
 corrtype = 'spearman';
 
 
@@ -33,10 +33,10 @@ end
 switch corrtype
     case 'pearson'
         [R,p] = corr(x,y);
-        corrtext = ['R = ',num2str(R)];
+        corrtext = ['R = ',num2str(round(R,3))];
     case 'spearman'
         [rho,p] = corr(x,y,'type','Spearman');
-         corrtext = ['\rho = ',num2str(rho)];
+         corrtext = ['\rho = ',num2str(round(rho,3))];
 end
 
 
@@ -55,6 +55,9 @@ switch sig
 
         corrtext = ['R = ',num2str(pf(1))];
         sigtext = [' +/-',num2str(diff(SlopeCI(:,1))/2)];
+        
+    case 'none'
+        sigtext = [];
 end
 
 %%

@@ -1,4 +1,4 @@
-function [peakTE,CI,sigTE,allTE,maxdelay] = TEConnect(spikes,int,timerange,SIGTEST)
+function [peakTE,CI,sigTE,allTE,maxdelay] = TEConnect(spiketimes,int,timerange,SIGTEST)
 %UNTITLED Summary of this function goes here
 %   Detailed explanation goes here
 %
@@ -7,7 +7,7 @@ function [peakTE,CI,sigTE,allTE,maxdelay] = TEConnect(spikes,int,timerange,SIGTE
 %
 %%
 SELFCONNECT = false;
-%SIGTEST = true;
+SIGTEST = false;
 numshuff = 100;
 
 if ~exist('timerange','var')
@@ -15,11 +15,41 @@ if ~exist('timerange','var')
 end 
 delays = [timerange(1):timerange(2)];
 
+%%
+if isa(spiketimes,'tsdArray')
+    numcells = length(spiketimes);
+    for cc = 1:numcells
+        spiketimestemp{cc} = Range(spiketimes{cc},'s');
+    end
+    spiketimes = spiketimestemp;
+    clear spiketimestemp
+elseif isa(spiketimes,'cell') && isa(spiketimes{1},'tsdArray')
+    numpop = length(spiketimes);
+    lastpopnum = 0;
+    for pp = 1:numpop
+        if length(spiketimes{pp})==0
+            spiketimes{pp} = {};
+            popcellind{pp} = [];
+            continue
+        end
+        for cc = 1:length(spiketimes{pp})
+            spiketimestemp{cc} = Range(spiketimes{pp}{cc},'s');
+        end
+        spiketimes{pp} = spiketimestemp;
+        popcellind{pp} = [1:length(spiketimes{pp})]+lastpopnum;
+        lastpopnum = popcellind{pp}(end);
+        clear spiketimestemp
+    end
+    spiketimes = cat(2,spiketimes{:});
+    numcells = length(spiketimes);
+    subpop = 'done';
+end
 
+%%
     
 %Convert Spiketimes to a spike matrix with 1ms bins
 dt = 0.001;
-[spikemat,t] = SpktToSpkmat(spikes, [], dt);
+[spikemat,t] = SpktToSpkmat(spiketimes, [], dt);
 
 %Restrict to spikes in int (if applicable)
 if exist('int','var')
@@ -52,7 +82,7 @@ if SIGTEST
         if mod(tt,5)==1
             %display(['Shuffle ',num2str(tt),' of ',num2str(numshuff)])
         end
-        [shuffTE(:,:,tt)] = TEConnect(JitterSpiketimes(spikes,0.02),int,timerange,false);
+        [shuffTE(:,:,tt)] = TEConnect(JitterSpiketimes(spiketimes,0.02),int,timerange,false);
     end
 end
 
