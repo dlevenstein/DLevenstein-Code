@@ -10,10 +10,10 @@ function [corrmat,sites] = LFPPairMat(varargin)
 %       'ints'      time intervals during which to calculate sitemap
 %       'frange'    frequency range to calculate coherence/correlation
 %       'metric'    pairwise metric to use
-%           'coh'   (default) 
-%           'corr'
-%           'powercorr'
-%           'ISPC'
+%           'coh'   (default) (not functional)
+%           'corr'  (not functional)
+%           'powercorr' (not functional)
+%           'ISPC'  (functional)
 %       'FMA'
 %       'numload'   max number of channels to load at a time, decreases
 %                   computing time but increases RAM pressure
