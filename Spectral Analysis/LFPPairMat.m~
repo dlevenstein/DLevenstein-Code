@@ -44,7 +44,7 @@ defaultChannels = 'all';
 checkChannels = @(x) strcmp(x,'all') || isnumeric(x);
 
 defaultMetric = 'ISPC';
-validMetrics = {'filtcorr','corr','powercorr','ISPC'};
+validMetrics = {'coh','corr','powercorr','ISPC'};
 checkMetric = @(x) any(validatestring(x,validMetrics));
 
 defaultFrange = 'gamma';
@@ -93,9 +93,8 @@ for ss1 = 1:numgroups
             [LFPss1,~] = Phase(LFPss1);
         elseif strcmp(p.Results.metric,'powercorr')
             [~,LFPss1] = Phase(LFPss1);
-        elseif ~strcmp(p.Results.metric,'filtcorr')
-            display(['Doing correlation between filtered signal,'...
-                'if this isn"t what you want, you have a problem'])
+        else
+            display('DId you put the functionality for the metric in the function?')
         end
     end
     
@@ -122,9 +121,8 @@ for ss1 = 1:numgroups
                 [LFPss2,~] = Phase(LFPss2);
             elseif strcmp(p.Results.metric,'powercorr')
                 [~,LFPss2] = Phase(LFPss2);
-            elseif ~strcmp(p.Results.metric,'filtcorr')
-                display(['Doing correlation between filtered signal,'...
-                    'if this isn"t what you want, you have a problem'])
+            else
+                display('DId you put the functionality for the metric in the function?')
             end
         end
         
