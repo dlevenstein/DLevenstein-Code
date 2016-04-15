@@ -76,7 +76,6 @@ groups = discretize(1:numsites,groupstarts);
 %% Calculate the pairwise matrix
 corrmat = ones(numsites);
 %%
-tic
 for ss1 = 1:numgroups
     %%
     tic
@@ -146,7 +145,7 @@ for ss1 = 1:numgroups
    %%
 
 end
-toc
+
 
 
 end
