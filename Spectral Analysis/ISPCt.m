@@ -1,6 +1,18 @@
 function [ISPCt,phaselag] = ISPCt(sig1phase,sig2phase,dt,win,sf_sig)
-%UNTITLED3 Summary of this function goes here
-%   Detailed explanation goes here
+%[ISPCt,phaselag] = ISPCt(sig1phase,sig2phase,dt,win,sf_sig)
+%
+%INPUT 
+%   sig1phase   [Nt x 1] vector of phase values for a pre-filtered LFP
+%               signal
+%   sig2phase   similar to sig1phase for a second signal
+%               -OR- 'diff'. if sig2phase is 'diff', then sig1phase should
+%               be the phase difference for two signals.
+%   dt          desired time resolution of the output signal (s)
+%   win         window size (should be an interger number of cycles for the
+%               filtering frequency) (s)
+%   sf_sig      sampling frequency of the signal
+%
+%
 %
 %   win     seconds
 %%
