@@ -1,19 +1,22 @@
-function [ ISPCgram,lags ] = ISPCgram(signal1,signal2,wave_cyc,frange,nfreqs,win_cyc,dt,sf_sig)
-%UNTITLED Summary of this function goes here
-%   Detailed explanation goes here
+function [ ISPCgram,freqs,lags ] = ISPCgram(signal1,signal2,wave_cyc,frange,nfreqs,win_cyc,dt,sf_sig)
+%[ISPCgram,lags] = ISPCgram(signal1,signal2,wave_cyc,frange,nfreqs,win_cyc,dt,sf_sig)
 %
-%
-% sf    sampling frequency of the signel
-% dt    desired output time step
+%INPUT
+%   signal1,2   [Nt x 1] LFP signal or {Nints} cell array of LFP signals
+%   wave_cyc    number of wavelet cycles - higher number = better frequency
+%               resolution, worse time resolution. recommend: 4
+%   frange      [min max] frequency bounds
+%   nfreqs      number of frequencies to look at
+%   win_cyc     window size for calculating ISPC, in units of cycles 
+%   sf_sig      sampling frequency of the signel
+%   dt          desired output time step
 %
 %%Dependencies
 %   WaveFilt
 %   MorletWavelet
 %   FConv
 %
-%
-%Last Updated: 12/3/15
-%DLevenstein
+%DLevenstein 2015/16
 %%
 if isempty(signal1)
     freqs=[]; t=[]; ISPCgram=signal1;
@@ -27,7 +30,7 @@ if iscell(signal1)
 end
 
 
-
+space = log;
 
 fmin = frange(1);
 fmax = frange(2);
