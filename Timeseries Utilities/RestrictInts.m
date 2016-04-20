@@ -1,7 +1,7 @@
 function [ints,keepints,containingints] = RestrictInts(ints,restrictints)
-%[ints] = RestrictInts(ints,restrictingints) restricts intervals to those
-%only appearing in restrictingints. Can also return indices of restricting
-%ints that contain ints
+%[ints,keepints,containingints] = RestrictInts(ints,restrictingints) 
+%restricts intervals to those only appearing in restrictingints. 
+%Can also return indices of restricting ints that contain ints
 %
 %INPUTS
 %   ints            [Ni x 2] interval start and end times 

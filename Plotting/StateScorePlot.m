@@ -1,10 +1,14 @@
-function [ output_args ] = StateScorePlot( stateints,colors )
-%UNTITLED2 Summary of this function goes here
-%   Detailed explanation goes here
+function [ phandle ] = StateScorePlot( stateints,colors )
+%UStateScorePlot( stateints,colors ) plots a state score indicator plot
+%from state intervals with designated colors.
+%
+%INPUTS
+%   stateints   {Nstates} cell array of [Nints x 2] time intervals
+%   colors      {Nstates} cell array of colors
 %%
-yrange = get(gca,'ylim');
-ylow = yrange(2)*1.01;
-yrange = yrange(2)-yrange(1);
+plotylimits = get(gca,'ylim');
+ylow = plotylimits(2)*1.01;
+yrange = plotylimits(2)-plotylimits(1);
 
 numstates = length(stateints);
 for ss = 1:numstates
@@ -18,9 +22,11 @@ statey = cellfun(@(X) ylow+yrange*X,yscale,'UniformOutput',false);
 
 
 %%
+hold on
     for ss = 1:numstates
         plot(stateints{ss}',ylow*ones(size(stateints{ss}))',colors{ss},'LineWidth',10)
     end
 
+ylim([plotylimits(1) ylow]);  
 end
 
