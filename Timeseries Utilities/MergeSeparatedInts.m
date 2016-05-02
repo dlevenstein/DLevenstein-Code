@@ -5,8 +5,12 @@ function [ ints ] = MergeSeparatedInts( ints,minseparation )
 %INPUT
 %   ints            (n_ints x 2) matrix of interval start and end times
 %   minseparation   merge ints separated by less than or equal to min
-%%
+%% Test
+% ints = [0 3;2 4; 6 10; 10.5 13;  20 30; 19 21];
+% minseparation = 0.5;
 
+
+%%
 %Sort Ints by their end times so all intervals end before the
 %subsequent interval ends
 [~,sort_ints] = sort(ints(:,2));
