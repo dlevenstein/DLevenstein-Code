@@ -1,7 +1,17 @@
 function [ spiketimes ] = JitterSpiketimes(spiketimes,jitterwin)
-%UNTITLED Summary of this function goes here
-%   Detailed explanation goes here
+%[ spiketimes ] = JitterSpiketimes(spiketimes,jitterwin) jitters spiketimes
+%of all cells within a designated window.
 %
+%INPUT
+%   spiketimes  {Ncells} cell array of [Nspikes] vectors of spiketimes for
+%               each cell
+%   jitterwin   time window within which to jitter spike times
+%
+%OUTPUT
+%   spiketimes  jittered spiketimes
+%
+%
+%DLevenstein 2016
 %%
 numcells = length(spiketimes);
 if isa(spiketimes,'tsdArray')
