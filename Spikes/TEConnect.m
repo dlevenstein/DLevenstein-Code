@@ -7,7 +7,7 @@ function [peakTE,CI,sigTE,allTE,maxdelay] = TEConnect(spiketimes,int,timerange,S
 %
 %%
 SELFCONNECT = false;
-SIGTEST = false;
+SIGTEST = true;
 numshuff = 100;
 
 if ~exist('timerange','var')
