@@ -1,6 +1,7 @@
 function [spikemat,t,spindices] = SpktToSpkmat(spiketimes, T, dt,overlap)
-%SpktToSpkmat(spiketimes,T, dt) takes a 1 x N_neurons cell array of spiketimes 
-%and converts into a t/dt x N spike matrix.
+%[spikemat,t,spindices] = SpktToSpkmat(spiketimes, T, dt,overlap) takes a 
+% 1 x N_neurons cell array of spiketimes  and converts into a t/dt x N spike
+% matrix.
 %
 %INPUTS
 %Options for T:

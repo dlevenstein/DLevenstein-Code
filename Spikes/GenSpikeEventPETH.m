@@ -1,6 +1,7 @@
 function [ ratePETH,popsynchPETH,popcellind,cellpopidx ] = GenSpikeEventPETH(spiketimes,int,varargin)
-%UNTITLED Summary of this function goes here
-%   Detailed explanation goes here
+%[ratePETH,popsynchPETH,popcellind,cellpopidx] = GenSpikeEventPETH(spiketimes,int)
+%Calculates the PETH of spikes and their population rate around a set of
+%event times.
 %
 %INPUT
 %   spiketimes
