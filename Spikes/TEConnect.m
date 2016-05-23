@@ -7,7 +7,7 @@ function [peakTE,CI,sigTE,allTE,maxdelay] = TEConnect(spiketimes,int,timerange,S
 %
 %%
 SELFCONNECT = false;
-SIGTEST = false;
+%SIGTEST = false;
 numshuff = 100;
 
 if ~exist('timerange','var')
@@ -78,9 +78,9 @@ end
 shuffTE = zeros([size(peakTE),numshuff]);
 %shuffCI = zeros([size(CI),numshuff]);
 if SIGTEST
-    parfor tt = 1:numshuff
+    for tt = 1:numshuff
         if mod(tt,5)==1
-            %display(['Shuffle ',num2str(tt),' of ',num2str(numshuff)])
+            display(['Shuffle ',num2str(tt),' of ',num2str(numshuff)])
         end
         [shuffTE(:,:,tt)] = TEConnect(JitterSpiketimes(spiketimes,0.02),int,timerange,false);
     end
