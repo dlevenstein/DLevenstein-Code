@@ -3,7 +3,8 @@ function [ INT ] = IDXtoINT( IDX ,numstates)
 %
 %INPUT
 %   IDX:    [t x 1] vector of state indices, where states are identified by
-%           integers starting from 1.
+%           integers starting from 1. Times with IDX 0 will not be counted
+%           in any interval INT
 %   numstates (optional)  number of interval types (for use
 %
 %OUTPUT
@@ -12,11 +13,14 @@ function [ INT ] = IDXtoINT( IDX ,numstates)
 %DLevenstein 2015-16
 %%
 
-if exist('numstates','var')
-    states = 1:numstates;
-else
-    states = unique(IDX);
-    numstates = length(states);
+if ~exist('numstates','var')
+    numstates = max(IDX);
+end
+
+states = 1:numstates;
+
+if isrow(IDX)
+    IDX = IDX';
 end
 
 IDX = [0; IDX; 0];
