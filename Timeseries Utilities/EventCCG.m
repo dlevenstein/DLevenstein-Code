@@ -16,15 +16,11 @@ function [ ccghist,ccgbins ] = EventCCG(events1,events2)
 %               
 %
 %DLevenstein 2016
-%% DEV
-%events1 = rippleints(:,2);
-%events2 = SleepEvents.DeltaPeaks;
-%events2 = SleepEvents.Spindles;
 %% Parms (to be made input options with inputParser)
 twin = 2; %s
-numbins = 20;
+numbins = 40;
 binsize = (twin*2)./numbins;
-normbins = 5;
+normbins = 10;
 %NOTE: need to renormalize histogram to counts/time
 
 
@@ -97,7 +93,7 @@ switch event2type
                     plot([1 1],get(gca,'ylim'),'k')
                     xlabel('t lag (s)');ylabel('Event Rate (Events/s)')
                     set(gca,'XTick',[-twin:twin+1])
-                    set(gca,'XTickLabels',{-twin:-1,'S','E',2:(twin+1)})
+                    set(gca,'XTickLabels',{-twin:-1,'S','E',1:twin})
         end
         
 
