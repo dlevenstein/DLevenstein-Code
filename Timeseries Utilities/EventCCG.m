@@ -13,14 +13,16 @@ function [ ccghist,ccgbins ] = EventCCG(events1,events2)
 %               relative to start/end times and internally time normalized
 %               time (i.e. a time axis looks like:
 %               -1s---S----E---+1
-%               
+%
+%TO DO
+%-inputParser
 %
 %DLevenstein 2016
 %% Parms (to be made input options with inputParser)
-twin = 2; %s
-numbins = 40;
-binsize = (twin*2)./numbins;
-normbins = 10;
+twin = 200; %s (before/after)
+numbins = 40; %(before/after)
+binsize = (twin*2)./numbins; 
+normbins = 20;  %(within start-end)
 %NOTE: need to renormalize histogram to counts/time
 
 
