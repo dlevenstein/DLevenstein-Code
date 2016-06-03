@@ -19,10 +19,10 @@ function [ ccghist,ccgbins ] = EventCCG(events1,events2)
 %
 %DLevenstein 2016
 %% Parms (to be made input options with inputParser)
-twin = 200; %s (before/after)
-numbins = 40; %(before/after)
+twin = 3; %s (before/after)
+numbins = 30; %(before/after)
 binsize = (twin*2)./numbins; 
-normbins = 20;  %(within start-end)
+normbins = 5;  %(within start-end)
 %NOTE: need to renormalize histogram to counts/time
 
 
