@@ -21,8 +21,21 @@ numrecs = length(s);
 %% Sleep Score the LFP from the source folder
 
 for ss = 1:numrecs
+    
+    %GoodSleepInterval for BWData
+    goodsleepmatBW = fullfile(sourcefolder{ss},recordingname{ss},[recordingname{ss},'_GoodSleepInterval.mat']);
+    if exist(goodsleepmatBW,'file')
+        load(goodsleepmatBW)
+        
+      %  scoretime = 
+    else
+        scoretime = [0 Inf];
+    end
+    
+    %SleepScore the data from source and save in dropbox database
     SleepScoreMaster(sourcefolder{ss},recordingname{ss},...
-        'savefolder',datasetfolder{ss})
+        'savefolder',datasetfolder{ss},...
+        'scoretime',scoretime)
 end
 
 
