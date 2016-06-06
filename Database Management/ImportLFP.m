@@ -4,7 +4,16 @@ function [ ] = ImportLFP()
 %%
 
 %%  Select Recordings from DatasetGuide spreadsheet
-dropboxdatabasefolder = '/Users/dlevenstein/Dropbox/Research/Datasets';
+laptopdatabasefolder = '/Users/dlevenstein/Dropbox/Research/Datasets';
+desktopdatabasefolder = '/mnt/data1/Dropbox/research/Datasets';
+if exist(desktopdatabasefolder,'dir')
+    dropboxdatabasefolder = desktopdatabasefolder;
+elseif exist(laptopdatabasefolder,'dir')
+     dropboxdatabasefolder = laptopdatabasefolder;
+else
+    display('No Dropbox Folder...')
+end
+
 datasetguidefilename = fullfile(dropboxdatabasefolder,'DatasetGuide.xlsx');
 datasetguide=readtable(datasetguidefilename);
 possiblerecordingnames = datasetguide.RecordingName;
@@ -34,8 +43,9 @@ for ss = 1:numrecs
     
     %SleepScore the data from source and save in dropbox database
     SleepScoreMaster(sourcefolder{ss},recordingname{ss},...
-        'savefolder',datasetfolder{ss},...
+        'savedir',datasetfolder{ss},'spindledelta',true,...
         'scoretime',scoretime)
+    close all
 end
 
 
