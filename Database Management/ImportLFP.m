@@ -30,21 +30,22 @@ numrecs = length(s);
 %% Sleep Score the LFP from the source folder
 
 for ss = 1:numrecs
-    
+recfolder = fullfile(datasetfolder{ss},recordingname{ss});
+
     %GoodSleepInterval for BWData
     goodsleepmatBW = fullfile(sourcefolder{ss},recordingname{ss},[recordingname{ss},'_GoodSleepInterval.mat']);
     if exist(goodsleepmatBW,'file')
         load(goodsleepmatBW)
-        
-      %  scoretime = 
+      	scoretime = StartEnd(GoodSleepInterval,'s');
+        copyfile(goodsleepmatBW,recfolder)
     else
         scoretime = [0 Inf];
     end
     
     %SleepScore the data from source and save in dropbox database
     SleepScoreMaster(sourcefolder{ss},recordingname{ss},...
-        'savedir',datasetfolder{ss},'spindledelta',true,...
-        'scoretime',scoretime)
+        'savedir',datasetfolder{ss},'spindledelta',false,...
+        'scoretime',scoretime,'overwrite',true)
     close all
 end
 
