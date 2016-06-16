@@ -64,6 +64,7 @@ numresults = nargout(analysisfunction);
 numrecs = length(recordingname);
 display(['Running Analysis on Recordings (',num2str(numrecs),')'])
 for rr = 1:numrecs
+    display(['Recording: ',num2str(rr),' of ',num2str(numrecs)])
     [results{1:numresults}] = feval(analysisfunction,datasetfolder{rr},recordingname{rr},figfolder);
     close all
 end
