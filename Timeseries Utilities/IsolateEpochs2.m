@@ -31,6 +31,9 @@ function [epochs,droppedints] = IsolateEpochs2(data,int,win,sf,varargin)
 %Last Updated: 11/27/15
 %DLevenstein
 %%
+epochs = {};
+droppedints = [];
+
 INCLUDENAN = false;
 if sum(ismember(varargin, 'includeNaN'))
 	INCLUDENAN = true;
@@ -41,6 +44,7 @@ if sum(ismember(varargin, 'discrete'))
     t_events = sf;
     sf = 1;
     DISCRETE = true;
+    epochs = cell(0,2);
 end
    
 if isa(int,'intervalSet')
@@ -48,8 +52,6 @@ if isa(int,'intervalSet')
 end
 
 if isempty(int)
-    epochs = {};
-    droppedints = [];
     return
 end
 

@@ -65,7 +65,19 @@ numrecs = length(recordingname);
 display(['Running Analysis on Recordings (',num2str(numrecs),')'])
 for rr = 1:numrecs
     display(['Recording: ',num2str(rr),' of ',num2str(numrecs)])
+    
+    [~, outputNames] = get_arg_names(fullfile(functionpath,[analysisfunction,'.m']));
+    outputNames = outputNames{1};
+    
     [results{1:numresults}] = feval(analysisfunction,datasetfolder{rr},recordingname{rr},figfolder);
+    
+    for ss = 1:numresults
+        eval([outputNames{ss} '= results{ss};']);
+    end
+    
+    save([figfolder,recordingname{rr},'_',analysisfunction],...
+    outputNames{:})
+    
     close all
 end
 
