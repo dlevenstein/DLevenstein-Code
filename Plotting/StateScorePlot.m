@@ -24,7 +24,7 @@ statey = cellfun(@(X) ylow+yrange*X,yscale,'UniformOutput',false);
 %%
 hold on
     for ss = 1:numstates
-        plot(stateints{ss}',ylow*ones(size(stateints{ss}))',colors{ss},'LineWidth',10)
+        plot(stateints{ss}',ylow*ones(size(stateints{ss}))','Color',colors{ss},'LineWidth',10)
     end
 
 ylim([plotylimits(1) ylow]);  
