@@ -1,4 +1,4 @@
-function [Zdata,intmean,intstd] = ZScoreToInt(data,int,sf)
+function [normdata,intmean,intstd] = NormToInt(data,int,sf,normtype)
 %ZScoreToInt(data,int,sf) z-scores the data to the mean and standard
 %deviation of the data in intervals int
 %
@@ -8,10 +8,7 @@ function [Zdata,intmean,intstd] = ZScoreToInt(data,int,sf)
 %           which to Z score the data to
 %   sf      (optional) sampling frequency of the data. default 1
 %
-%
-%Last Updated: 10/3/15
-%ZScoreToInt is old. Recommended use NormToInt with normtype 'Z'
-%DLevenstein
+%DLevenstein Summer 2016
 %%
 if isa(int,'intervalSet')
     int = [Start(int,'s'), End(int,'s')];
@@ -34,7 +31,14 @@ end
 intmean = nanmean(int_data);
 intstd = nanstd(int_data);
 
-Zdata = (data-repmat(intmean,length(data(:,1)),1))./repmat(intstd,length(data(:,1)),1);
+switch normtype
+    case 'Z'
+        normdata = (data-repmat(intmean,length(data(:,1)),1))./repmat(intstd,length(data(:,1)),1);
+    case 'mean'
+        normdata = data./intmean;
+    otherwise
+        display('normtype should be ''Z'' or ''mean''')
+end
 
 
 end
