@@ -31,15 +31,27 @@ numrecs = length(s);
 
 for ss = 1:numrecs
 recfolder = fullfile(datasetfolder{ss},recordingname{ss});
+sourcefolder = fullfile(sourcefolder{ss},recordingname{ss});
 
     %GoodSleepInterval for BWData
-    goodsleepmatBW = fullfile(sourcefolder{ss},recordingname{ss},[recordingname{ss},'_GoodSleepInterval.mat']);
+    goodsleepmatBW = fullfile(sourcefolder,[recordingname{ss},'_GoodSleepInterval.mat']);
+    goodsleepmatDL = fullfile(recfolder,[recordingname{ss},'_GoodInterval.mat']);
     if exist(goodsleepmatBW,'file')
         load(goodsleepmatBW)
       	scoretime = StartEnd(GoodSleepInterval,'s');
         copyfile(goodsleepmatBW,recfolder)
+    elseif exist(goodsleepmatDL,'file')
+        load(goodsleepmatDL)
+      	scoretime = GoodSleepInterval;
     else
         scoretime = [0 Inf];
+    end
+    
+    %Bad Channels - copy to source folder.  Need to deal with this for
+    %version control.......
+    badchannelDL = fullfile(recfolder,'bad_channels.txt');
+    if exist(badchannelDL,'file') 
+        copyfile(badchannelDL,sourcefolder)
     end
     
     %SleepScore the data from source and save in dropbox database
