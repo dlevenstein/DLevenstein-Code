@@ -45,7 +45,7 @@ recfolder = fullfile(datasetfolder{ss},recordingname{ss});
     %SleepScore the data from source and save in dropbox database
     SleepScoreMaster(sourcefolder{ss},recordingname{ss},...
         'savedir',datasetfolder{ss},'spindledelta',false,...
-        'scoretime',scoretime,'overwrite',false)
+        'scoretime',scoretime,'overwrite',true)
     close all
 end
 
