@@ -7,7 +7,7 @@ function [ phandle ] = StateScorePlot( stateints,colors )
 %   colors      {Nstates} cell array of colors
 %%
 plotylimits = get(gca,'ylim');
-ylow = plotylimits(2)*1.01;
+ylow = plotylimits(2)*1.05;
 yrange = plotylimits(2)-plotylimits(1);
 
 numstates = length(stateints);
@@ -24,7 +24,7 @@ statey = cellfun(@(X) ylow+yrange*X,yscale,'UniformOutput',false);
 %%
 hold on
     for ss = 1:numstates
-        plot(stateints{ss}',ylow*ones(size(stateints{ss}))','Color',colors{ss},'LineWidth',10)
+        plot(stateints{ss}',ylow*ones(size(stateints{ss}))','Color',colors{ss},'LineWidth',8)
     end
 
 ylim([plotylimits(1) ylow]);  
