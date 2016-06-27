@@ -30,11 +30,12 @@ numrecs = length(s);
 %% Sleep Score the LFP from the source folder
 
 for ss = 1:numrecs
+display(['Importing: ',num2str(ss), ' of ', num2str(numrecs)])
 recfolder = fullfile(datasetfolder{ss},recordingname{ss});
-sourcefolder = fullfile(sourcefolder{ss},recordingname{ss});
+sourcerecfolder = fullfile(sourcefolder{ss},recordingname{ss});
 
     %GoodSleepInterval for BWData
-    goodsleepmatBW = fullfile(sourcefolder,[recordingname{ss},'_GoodSleepInterval.mat']);
+    goodsleepmatBW = fullfile(sourcerecfolder,[recordingname{ss},'_GoodSleepInterval.mat']);
     goodsleepmatDL = fullfile(recfolder,[recordingname{ss},'_GoodInterval.mat']);
     if exist(goodsleepmatBW,'file')
         load(goodsleepmatBW)
@@ -51,7 +52,7 @@ sourcefolder = fullfile(sourcefolder{ss},recordingname{ss});
     %version control.......
     badchannelDL = fullfile(recfolder,'bad_channels.txt');
     if exist(badchannelDL,'file') 
-        copyfile(badchannelDL,sourcefolder)
+        copyfile(badchannelDL,sourcerecfolder)
     end
     
     %SleepScore the data from source and save in dropbox database
