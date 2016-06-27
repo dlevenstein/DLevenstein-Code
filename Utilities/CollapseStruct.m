@@ -8,6 +8,7 @@ function [ structout ] = CollapseStruct( structin,dim,combine )
 %               structure array. (default: 2)
 %   (optional)
 %       combine     can take 'mean' or 'median' instead of concatenating
+%                   or 'std'
 %
 %       
 %%
@@ -39,6 +40,8 @@ for ff = 1:length(fields)
             structout.(currentfield) = nanmean(structout.(currentfield),dim);
         elseif strcmp(combine,'median')
             structout.(currentfield) = nanmedian(structout.(currentfield),dim);
+        elseif strcmp(combine,'std')
+            structout.(currentfield) = nanstd(structout.(currentfield),[],dim);
         end
     end
 end
