@@ -1,5 +1,5 @@
 function [histmean,histstd,histp] = HistWithMean(data,numbins)
-%UNTITLED Summary of this function goes here
+%[histmean,histstd,histp] = HistWithMean(data,numbins)
 %   Detailed explanation goes here
 %%
 
