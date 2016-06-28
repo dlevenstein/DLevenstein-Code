@@ -1,4 +1,4 @@
-function [  ] = CleanAndCopyRegionalLFP(datasetfolder,recname, sourcefolder)
+function [  ] = CleanAndCopyRegionalLFP(datasetfolder,recname,sourcefolder,usechannels)
 %UNTITLED Summary of this function goes here
 %   Detailed explanation goes here
 %%
@@ -57,7 +57,7 @@ for rr = 1:numregions
     %-find the sitenames that fit within the region
     %-for each of those sites, find the channel numbers that correspond to
     %that spikegroup, exclude bad_channels
-    %
+    %-Remove 60Hz Noise
 end
 
 ctxgroups = ismember(spkgroupanatomy.AnatomicalSite,CTXlabels);
