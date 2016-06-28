@@ -33,6 +33,9 @@ for ss = 1:numrecs
 display(['Importing: ',num2str(ss), ' of ', num2str(numrecs)])
 recfolder = fullfile(datasetfolder{ss},recordingname{ss});
 sourcerecfolder = fullfile(sourcefolder{ss},recordingname{ss});
+if ~exist(recfolder,'dir')
+    mkdir(recfolder)
+end
 
     %GoodSleepInterval for BWData
     goodsleepmatBW = fullfile(sourcerecfolder,[recordingname{ss},'_GoodSleepInterval.mat']);
@@ -58,21 +61,21 @@ sourcerecfolder = fullfile(sourcefolder{ss},recordingname{ss});
     %SleepScore the data from source and save in dropbox database
     SleepScoreMaster(sourcefolder{ss},recordingname{ss},...
         'savedir',datasetfolder{ss},'spindledelta',false,...
-        'scoretime',scoretime,'overwrite',false)
+        'scoretime',scoretime,'overwrite',true)
     close all
     
     
-    %Add regional LFP to the database, remove 60Hz noise
-    SGCfilename_source = fullfile(sourcerecfolder,[recordingname{ss},'_SpikeGroupAnatomy.csv']);
-    SGCfilename_dataset = fullfile(recfolder,[recordingname{ss},'_SpikeGroupAnatomy.csv']);
-    if exist(SGCfilename_source,'file') & ~exist(SGCfilename_dataset,'file')
-        copyfile(SGCfilename_source,recfolder)
-    elseif ~exist(SGCfilename_source,'file') & ~exist(SGCfilename_dataset,'file')
-        display('No Spikegroup Anatomy File...')
-        continue
-    end
-    
-    CleanAndCopyRegionalLFP(datasetfolder{ss},recordingname{ss},sourcefolder{ss})
+%     %Add regional LFP to the database, remove 60Hz noise
+%     SGCfilename_source = fullfile(sourcerecfolder,[recordingname{ss},'_SpikeGroupAnatomy.csv']);
+%     SGCfilename_dataset = fullfile(recfolder,[recordingname{ss},'_SpikeGroupAnatomy.csv']);
+%     if exist(SGCfilename_source,'file') & ~exist(SGCfilename_dataset,'file')
+%         copyfile(SGCfilename_source,recfolder)
+%     elseif ~exist(SGCfilename_source,'file') & ~exist(SGCfilename_dataset,'file')
+%         display('No Spikegroup Anatomy File...')
+%         continue
+%     end
+%     
+%     CleanAndCopyRegionalLFP(datasetfolder{ss},recordingname{ss},sourcefolder{ss})
 
 end
 
