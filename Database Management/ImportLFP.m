@@ -31,19 +31,19 @@ numrecs = length(s);
 
 for ss = 1:numrecs
 display(['Importing: ',num2str(ss), ' of ', num2str(numrecs)])
-recfolder = fullfile(datasetfolder{ss},recordingname{ss});
+datasetrecfolder = fullfile(datasetfolder{ss},recordingname{ss});
 sourcerecfolder = fullfile(sourcefolder{ss},recordingname{ss});
-if ~exist(recfolder,'dir')
-    mkdir(recfolder)
+if ~exist(datasetrecfolder,'dir')
+    mkdir(datasetrecfolder)
 end
 
     %GoodSleepInterval for BWData
     goodsleepmatBW = fullfile(sourcerecfolder,[recordingname{ss},'_GoodSleepInterval.mat']);
-    goodsleepmatDL = fullfile(recfolder,[recordingname{ss},'_GoodInterval.mat']);
+    goodsleepmatDL = fullfile(datasetrecfolder,[recordingname{ss},'_GoodInterval.mat']);
     if exist(goodsleepmatBW,'file')
         load(goodsleepmatBW)
       	scoretime = StartEnd(GoodSleepInterval,'s');
-        copyfile(goodsleepmatBW,recfolder)
+        copyfile(goodsleepmatBW,datasetrecfolder)
     elseif exist(goodsleepmatDL,'file')
         load(goodsleepmatDL)
       	scoretime = GoodSleepInterval;
@@ -53,7 +53,7 @@ end
     
     %Bad Channels - copy to source folder.  Need to deal with this for
     %version control.......
-    badchannelDL = fullfile(recfolder,'bad_channels.txt');
+    badchannelDL = fullfile(datasetrecfolder,'bad_channels.txt');
     if exist(badchannelDL,'file') 
         copyfile(badchannelDL,sourcerecfolder)
     end
@@ -61,21 +61,25 @@ end
     %SleepScore the data from source and save in dropbox database
     SleepScoreMaster(sourcefolder{ss},recordingname{ss},...
         'savedir',datasetfolder{ss},'spindledelta',false,...
-        'scoretime',scoretime,'overwrite',true)
+        'scoretime',scoretime,'overwrite',false)
     close all
     
     
-%     %Add regional LFP to the database, remove 60Hz noise
-%     SGCfilename_source = fullfile(sourcerecfolder,[recordingname{ss},'_SpikeGroupAnatomy.csv']);
-%     SGCfilename_dataset = fullfile(recfolder,[recordingname{ss},'_SpikeGroupAnatomy.csv']);
-%     if exist(SGCfilename_source,'file') & ~exist(SGCfilename_dataset,'file')
-%         copyfile(SGCfilename_source,recfolder)
-%     elseif ~exist(SGCfilename_source,'file') & ~exist(SGCfilename_dataset,'file')
-%         display('No Spikegroup Anatomy File...')
-%         continue
-%     end
-%     
-%     CleanAndCopyRegionalLFP(datasetfolder{ss},recordingname{ss},sourcefolder{ss})
+    %Add regional LFP to the database, remove 60Hz noise
+    SGCfilename_source = fullfile(sourcerecfolder,[recordingname{ss},'_SpikeGroupAnatomy.csv']);
+    SGCfilename_dataset = fullfile(datasetrecfolder,[recordingname{ss},'_SpikeGroupAnatomy.csv']);
+    if exist(SGCfilename_source,'file') & ~exist(SGCfilename_dataset,'file')
+        copyfile(SGCfilename_source,datasetrecfolder)
+    elseif ~exist(SGCfilename_source,'file') & ~exist(SGCfilename_dataset,'file')
+        display('No Spikegroup Anatomy File...')
+        continue
+    end
+    
+    scoremetricspath = fullfile(datasetrecfolder,[recordingname{ss},'_StateScoreMetrics.mat']);
+    load(scoremetricspath,'SWchannum','THchannum')
+    
+    CleanAndCopyRegionalLFP(datasetfolder{ss},recordingname{ss},sourcefolder{ss},...
+        [SWchannum,THchannum],scoretime)
 
 end
 
