@@ -124,7 +124,12 @@ for rr = 1:numregions
         %include in CompareLFPChannels
     %%
         %-Remove 60Hz Noise
+%         display('Testing for and Removing 60Hz noise...')
+%         params.Fs = Fs; params.tapers = [3 5];
+%         pLFP = rmlinesc(pLFP,params,[],'y',60./Fs);
+        
 
+        %%
         %add LFP to LFP structure
         regionname = regionnames.Properties.VariableNames{rr};
         if gg ~= 1
