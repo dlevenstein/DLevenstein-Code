@@ -1,6 +1,10 @@
 function [  ] = CleanAndCopyRegionalLFP(datasetfolder,recname,sourcefolder,specialchannels,scoretime)
-%UNTITLED Summary of this function goes here
-%   Detailed explanation goes here
+%CleanAndCopyRegionalLFP(datasetfolder,recname,sourcefolder,specialchannels,scoretime)
+%
+%Requires:  _SpikeGroupAnatomy.csv in the recordings folder and
+%           RegionNameList.csv in the top level database folder.
+%           SpikeGroups in SpikeGroupAnatomy.csv marked '-' will be ignored
+%
 %%
 PLOTFIG = true;
 figstuff = struct;
@@ -142,8 +146,8 @@ for rr = 1:numregions
             %Calcualte Z-scored Spectrogram
             numfreqs = 100;
             freqlist = logspace(0,2,numfreqs);
-            window = 10;
-            noverlap = 9;
+            window = 5;
+            noverlap = 4;
             window = window*Fs;
             noverlap = noverlap*Fs;
             [FFTspec,FFTfreqs,t_FFT] = spectrogram(figstuff(end).LFP,window,noverlap,freqlist,Fs./downfactor);
