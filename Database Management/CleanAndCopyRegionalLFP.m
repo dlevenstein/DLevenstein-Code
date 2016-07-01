@@ -37,7 +37,7 @@ end
 %Load Rejectchannels list
 rejectchannels = [];
 if exist(fullfile(datasetfolder,recname,'bad_channels.txt'),'file')%bad channels is an ascii/text file where all lines below the last blank line are assumed to each have a single entry of a number of a bad channel (base 0)
-    t = ReadBadChannels_SleepScore(fullfile(datasetfolder,recordingname));
+    t = ReadBadChannels_SleepScore(fullfile(datasetfolder,recname));
     rejectchannels = cat(1,rejectchannels(:),t(:));
 end
         
@@ -54,7 +54,7 @@ else
 end
 regionnamefilename = fullfile(dropboxdatabasefolder,'RegionNameList.csv');
 regionnames=readtable(regionnamefilename);
-numregions = width(regionnames);
+
 
 %% Load the channel anatomy map
 spikegroupanatomyfilename = fullfile(datasetfolder,recname,[recname,'_SpikeGroupAnatomy.csv']);
@@ -67,7 +67,20 @@ spkgroupanatomy=readtable(spikegroupanatomyfilename);
 [sitenames,~,siteidx] = unique(spkgroupanatomy.AnatomicalSite);
 %Find and site names that aren't in a region list... need to save these as
 %separate region
+allsubregionnames = {regionnames{:,:}{:}};
+allsubregionnames(strcmp('',allsubregionnames))=[]; %remove empty strings
+notonlist = sitenames(~ismember(sitenames,allsubregionnames));
+notonlist(strcmp('-',notonlist))=[]; %remove don't-count channels
+notonlist(strcmp('',notonlist))=[]; %remove empty strings
+for nn = 1:length(notonlist)
+    regionnames.(notonlist{nn}) = cell(size(regionnames.(1)));
+    regionnames.(notonlist{nn})(1) = notonlist(nn);
+    regionnames.(notonlist{nn})(2:end)={''};
+end
 %%
+
+%%
+numregions = width(regionnames);
 for rr = 1:numregions
 %%
 %rr = 1;
@@ -76,9 +89,10 @@ for rr = 1:numregions
     numinregiongroups = length(regiongroups);
     %%
     for gg = 1:numinregiongroups
-        %gg = 1;
+      %  gg = 1;
         groupname = sitenames{regiongroups(gg)};
-        groupchannels = [SpkGrps(siteidx==regiongroups(gg)).Channels];
+        ingroupspikegroups = find(siteidx==regiongroups(gg));
+        groupchannels = [SpkGrps(ingroupspikegroups).Channels];
         
         %for each of those sites, find the channel numbers that correspond to
         %that spikegroup, exclude bad_channels, select usechannels
@@ -116,6 +130,7 @@ for rr = 1:numregions
         LFP.subregionname.(regionname) = groupname;
         LFP.channum.(regionname) = groupchannels(minnoisechannel);
         LFP.noisetimes.(regionname) = find(noisetimes);
+        LFP.spikegroups.(regionname) = ingroupspikegroups;
         
         
         %Stuff for plotting

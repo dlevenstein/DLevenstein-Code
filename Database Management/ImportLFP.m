@@ -65,12 +65,12 @@ end
     close all
     
     
-    %Add regional LFP to the database, remove 60Hz noise
-    SGCfilename_source = fullfile(sourcerecfolder,[recordingname{ss},'_SpikeGroupAnatomy.csv']);
+    %Add regional LFP to the database using SpikeGroupAnatomy, remove 60Hz noise
+    SGAfilename_source = fullfile(sourcerecfolder,[recordingname{ss},'_SpikeGroupAnatomy.csv']);
     SGCfilename_dataset = fullfile(datasetrecfolder,[recordingname{ss},'_SpikeGroupAnatomy.csv']);
-    if exist(SGCfilename_source,'file') & ~exist(SGCfilename_dataset,'file')
-        copyfile(SGCfilename_source,datasetrecfolder)
-    elseif ~exist(SGCfilename_source,'file') & ~exist(SGCfilename_dataset,'file')
+    if exist(SGAfilename_source,'file') & ~exist(SGCfilename_dataset,'file')
+        copyfile(SGAfilename_source,datasetrecfolder)
+    elseif ~exist(SGAfilename_source,'file') & ~exist(SGCfilename_dataset,'file')
         display('No Spikegroup Anatomy File...')
         continue
     end
