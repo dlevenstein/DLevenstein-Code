@@ -1,9 +1,13 @@
-function [ structout ] = CollapseStruct( structin,dim,combine )
+function [ structout ] = CollapseStruct( structin,dim,combine,NEST )
 %structout = CollapseStruct( structin,dim,combine ) Combines elements in a
 %structure array
 %
 %INPUT
-%   structin    struct(N).fields structure array with N elements.
+%   structin    struct(N).fields structure array with N elements where each
+%               of the N elements has the same fields and field structure.
+%               structin can have nested cell arrays or stuctures, but be
+%               careful with this... may not work for >1-dimensional
+%               structures/cell arrays
 %   dim         dimension along which to combine each element in the
 %               structure array. (default: 2)
 %   (optional)
@@ -11,13 +15,23 @@ function [ structout ] = CollapseStruct( structin,dim,combine )
 %                   or 'std'
 %
 %       
+%% A place for input options
+if ~exist('NEST','var')
+    NEST = false;
+end
+
+if ~exist('combine','var')
+    combine = 'justcat';
+end
+
+if ~exist('dim','var')
+    dim = 2;
+end
+
 %%
 fields = fieldnames(structin);
 
 %%
-if ~exist('dim','var')
-    dim = 2;
-end
 
 for ff = 1:length(fields)
     currentfield = fields{ff};
@@ -33,16 +47,27 @@ for ff = 1:length(fields)
 %             end
 %         end
 %     end
-    structout.(currentfield) = cat(dim,structin(:).(currentfield));
+
+	if isstruct(structin(1).(currentfield)) & NEST %For Nested Structures
+       structout.(currentfield) = cat(1,structin(:).(currentfield));
+       structout.(currentfield) = CollapseStruct(structout.(currentfield),dim,combine,true);
+       continue
+    elseif iscell(structin(1).(currentfield)) & NEST %For cell array in field
+        structout.(currentfield) = cat(1,structin(:).(currentfield));
+        structout.(currentfield) = cat(dim,structout.(currentfield){:});
+    else %For simple array in field
+        structout.(currentfield) = cat(dim,structin(:).(currentfield));
+    end
+
     
-    if exist('combine','var')
-        if strcmp(combine,'mean')
+    
+    switch combine
+        case 'mean'
             structout.(currentfield) = nanmean(structout.(currentfield),dim);
-        elseif strcmp(combine,'median')
+        case 'median'
             structout.(currentfield) = nanmedian(structout.(currentfield),dim);
-        elseif strcmp(combine,'std')
+        case'std'
             structout.(currentfield) = nanstd(structout.(currentfield),[],dim);
-        end
     end
 end
 

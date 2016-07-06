@@ -7,6 +7,7 @@ function [normdata,intmean,intstd] = NormToInt(data,int,sf,normtype)
 %   int     [Nints x 2] reference interval onsets and offset times within  
 %           which to Z score the data to
 %   sf      (optional) sampling frequency of the data. default 1
+%   normtype 'mean' or 'Z'
 %
 %DLevenstein Summer 2016
 %%

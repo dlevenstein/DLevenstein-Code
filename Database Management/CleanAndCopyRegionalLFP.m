@@ -165,7 +165,7 @@ end
 figstuff(1) = [];
 
 LFP.sf = Fs;
-LFP.t = [1:length(pLFP)]./LFP.sf;
+LFP.t = [1:length(pLFP)]'./LFP.sf;
 %%
 save(lfpsavename,'LFP')
 
