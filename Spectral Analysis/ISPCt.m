@@ -19,6 +19,7 @@ function [ISPCt,phaselag] = ISPCt(sig1phase,sig2phase,dt,win,sf_sig)
 if iscell(sig1phase)
     celllengths = cellfun(@length,sig1phase);
     sig1phase = vertcat(sig1phase{:});
+    sig2phase = vertcat(sig2phase{:});
 end
 
 
@@ -48,7 +49,7 @@ end
 
 
 if exist('celllengths','var')
-    ISPCt = mat2cell(ISPCt,nfreqs,celllengths);
+    ISPCt = mat2cell(ISPCt,1,celllengths);
 end
 %%
 % figure
