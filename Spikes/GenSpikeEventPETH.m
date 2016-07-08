@@ -13,6 +13,7 @@ function [ ratePETH,popsynchPETH,popcellind,cellpopidx ] = GenSpikeEventPETH(spi
 %       'twin'      Time window around onset/offset PETH (default: [2 2]s)
 %       'dt_onoff'  binsize for onset/offset PETH         (default: 0.05s)
 %       'normbins'  Number of bins in the time normalized interval 0-1
+%                   (default 30)
 %       'sorttype'
 %       'subpop'
 %
