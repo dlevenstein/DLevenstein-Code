@@ -64,7 +64,7 @@ numresults = nargout(analysisfunction);
 numrecs = length(recordingname);
 display(['Running Analysis on Recordings (',num2str(numrecs),')'])
 for rr = 1:numrecs
-    display(['Recording: ',num2str(rr),' of ',num2str(numrecs)])
+    display(['Recording: ',num2str(rr),' of ',num2str(numrecs),' - ',recordingname{rr}])
     
     [~, outputNames] = get_arg_names(fullfile(functionpath,[analysisfunction,'.m']));
     outputNames = outputNames{1};
@@ -76,7 +76,7 @@ for rr = 1:numrecs
     end
     
     save([figfolder,recordingname{rr},'_',analysisfunction],...
-    outputNames{:})
+    outputNames{:},recordingname{rr})
     
     close all
 end
