@@ -5,12 +5,16 @@ function [normdata,intmean,intstd] = NormToInt(data,int,sf,normtype)
 %INPUTS
 %   data    [Nt x Ndim]  
 %   int     [Nints x 2] reference interval onsets and offset times within  
-%           which to Z score the data to
+%           which to Z score the data to (optional)
 %   sf      (optional) sampling frequency of the data. default 1
-%   normtype 'mean' or 'Z'
+%   normtype 'mean' or 'Z' or 'max'
 %
 %DLevenstein Summer 2016
 %%
+if ~exist('int','var') || isempty(int)
+    int = [1 size(data,1)];
+end
+
 if isa(int,'intervalSet')
     int = [Start(int,'s'), End(int,'s')];
 end
@@ -36,7 +40,10 @@ switch normtype
     case 'Z'
         normdata = (data-repmat(intmean,length(data(:,1)),1))./repmat(intstd,length(data(:,1)),1);
     case 'mean'
-        normdata = data./intmean;
+        normdata = bsxfun(@(X,Y) X./Y,data,intmean);
+    case 'max'
+        colmax = max(data,[],1);
+        normdata = bsxfun(@(X,Y) X./Y,data,colmax);
     otherwise
         display('normtype should be ''Z'' or ''mean''')
 end

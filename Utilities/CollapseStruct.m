@@ -56,7 +56,11 @@ for ff = 1:length(fields)
         structout.(currentfield) = cat(1,structin(:).(currentfield));
         structout.(currentfield) = cat(dim,structout.(currentfield){:});
     else %For simple array in field
+        try
         structout.(currentfield) = cat(dim,structin(:).(currentfield));
+        catch
+            keyboard
+        end
     end
 
     
