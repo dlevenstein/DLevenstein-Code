@@ -9,11 +9,12 @@ function [freqs,synchcoupling,ratepowercorr,...
 %                                   or TSObject
 %   LFP
 %   (optional)
+%       'sf_LFP'
 %       'frange'
 %       'tbin'
 %       'waveparms'...
 %       'nfreqs'
-%       'ints'
+%       'int'
 %       'cellLFPchannel'  The local LFP channel associated with each cell (if
 %                       sites are in different electroanatomical regions)
 %       'cellsort'        'pca','none','sortf','sortorder','celltype','rate'
@@ -172,6 +173,9 @@ switch nfreqs
         [freqs,~,LFP_amp] = WaveSpec(LFP,frange,nfreqs,ncyc,1/sf_LFP,'log');
         LFP_amp = cat(2,LFP_amp{:})';
         t_LFP = cat(1,t_LFP{:});
+        
+        [t_LFP,IA] = unique(t_LFP); %remove doubles from overlapping ints
+        LFP_amp = LFP_amp(IA,:);
 
         LFP_phase = angle(LFP_amp);
         LFP_amp = abs(LFP_amp);
