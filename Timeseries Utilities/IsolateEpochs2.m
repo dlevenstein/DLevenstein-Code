@@ -53,6 +53,9 @@ end
 
 if isempty(int)
     return
+elseif isequal(int,[0,Inf])
+    epochs = {data};
+    return
 end
 
 

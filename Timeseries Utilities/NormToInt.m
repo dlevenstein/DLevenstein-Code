@@ -1,5 +1,5 @@
 function [normdata,intmean,intstd] = NormToInt(data,int,sf,normtype)
-%ZScoreToInt(data,int,sf) z-scores the data to the mean and standard
+%NormToInt(data,int,sf) normalizes the data to the mean and standard
 %deviation of the data in intervals int
 %
 %INPUTS
@@ -42,8 +42,12 @@ switch normtype
     case 'mean'
         normdata = bsxfun(@(X,Y) X./Y,data,intmean);
     case 'max'
-        colmax = max(data,[],1);
+        colmax = max(int_data,[],1);
         normdata = bsxfun(@(X,Y) X./Y,data,colmax);
+    case 'percentile'
+        sortdata = sort(int_data);
+        percentiles = linspace(0,1,length(sortdata));
+        normdata = interp1(sortdata,percentiles,data,'nearest');
     otherwise
         display('normtype should be ''Z'' or ''mean''')
 end

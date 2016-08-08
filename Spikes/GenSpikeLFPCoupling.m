@@ -43,7 +43,7 @@ p = inputParser;
 
 defaultSf = 1250;
 
-defaultInt = [];
+defaultInt = [0 Inf];
 checkInt = @(x) size(x,2)==2 && isnumeric(x) || isa(x,'intervalSet');
 
 defaultNfreqs = 100;
@@ -114,6 +114,8 @@ elseif isa(spiketimes,'cell') && isa(spiketimes{1},'tsdArray')
     spiketimes = cat(2,spiketimes{:});
     numcells = length(spiketimes);
     subpop = 'done';
+elseif isa(spiketimes,'cell')
+    numcells = length(spiketimes);
 end
 
 if isa(int,'intervalSet')
@@ -182,7 +184,8 @@ switch nfreqs
         %Normalize power to mean power for each frequency
         LFP_amp = bsxfun(@(X,Y) X./Y,LFP_amp,nanmean(LFP_amp,1));
 end
-        
+
+
 %% Calculate Population Synchrony Coupling
 overlap = p.Results.synchwin/synchdt;
 [spikemat,t_synch] = SpktToSpkmat(spiketimes, [], synchdt,overlap);
@@ -239,18 +242,18 @@ power4rate = interp1(t_LFP,LFP_amp,t_rate,'nearest');
 
 
 %% Spike-Phase Coupling
-%Pull the spike times out of the tsObject - can fix this later or whatever.
-
-
-
 [spikephasemag,spikephaseangle] = cellfun(@(X) spkphase(X),spiketimes,...
     'UniformOutput',false);
 spikephasemag = cat(1,spikephasemag{:});
 spikephaseangle = cat(1,spikephaseangle{:});
 
 
-%Spike-Phase Coupling function
+%Spike-Phase Coupling function - takes spike times from a single cell and
+%caluclates phase coupling magnitude/angle
 function [phmag,phangle] = spkphase(spktimes_fn)
+    %Spike Times have to be column vector
+        if isrow(spktimes_fn); spktimes_fn=spktimes_fn'; end
+
     %Take only spike times in intervals
     spktimes_fn = spktimes_fn(InIntervals(spktimes_fn,int));
     %Find phase and power at the closest LFP timepoint to each spike.
@@ -281,7 +284,7 @@ end
 %Jitter for Significane
 numjitt = 100;
 jitterbuffer = zeros(numcells,nfreqs,numjitt);
-jitterwin = 1/frange(1);
+jitterwin = 2/frange(1);
 %tic
 for jj = 1:numjitt
     if mod(jj,10) == 1
