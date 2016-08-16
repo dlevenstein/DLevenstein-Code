@@ -112,12 +112,7 @@ for rr = 1:numregions
             %Find least noisy channel
             pLFP = LoadBinary_Down(rawlfppath,'frequency',Fs,...
             'nchannels',nChannels,'channels',groupchannels+1,...
-            'start',scoretime(1),'duration',diff(scoretime),...
-            'downsample',5);
-            [noisescore,noiseresults] = CompareLFPChannels(pLFP);
-            [~,minnoisechannel] = min(noisescore);
-            
-            groupchannels = groupchannels(minnoisechannel);
+            'start',scoretime(1),'duration',diff(scoretime));
         end
     
     %%

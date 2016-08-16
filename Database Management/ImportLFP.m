@@ -55,13 +55,13 @@ end
     %version control.......
     badchannelDL = fullfile(datasetrecfolder,'bad_channels.txt');
     if exist(badchannelDL,'file') 
-        copyfile(badchannelDL,sourcerecfolder)
+        copyfile(badchannelDL,sourcerecfolder,'f')
     end
     
     %SleepScore the data from source and save in dropbox database
     SleepScoreMaster(sourcefolder{ss},recordingname{ss},...
         'savedir',datasetfolder{ss},'spindledelta',false,...
-        'scoretime',scoretime,'overwrite',false)
+        'scoretime',scoretime,'overwrite',true)
     close all
     
     
