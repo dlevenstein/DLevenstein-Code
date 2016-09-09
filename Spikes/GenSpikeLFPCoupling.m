@@ -47,7 +47,7 @@ defaultInt = [0 Inf];
 checkInt = @(x) size(x,2)==2 && isnumeric(x) || isa(x,'intervalSet');
 
 defaultNfreqs = 100;
-defaultNcyc = 6;
+defaultNcyc = 5;
 defaultFrange = [1 64];
 %validFranges = {'delta','theta','spindles','gamma','ripples'};
 %checkFrange = @(x) any(validatestring(x,validFranges)) || size(x) == [1,2];
@@ -165,6 +165,11 @@ switch nfreqs
         %Normalize Power to Mean Power
         LFP_amp = LFP_amp./mean(LFP_amp);
         t_LFP = cat(1,t_LFP{:});
+        
+        [t_LFP,IA] = unique(t_LFP); %remove doubles from overlapping ints
+        LFP_amp = LFP_amp(IA,:);
+        LFP_phase = LFP_phase(IA,:);
+        
         freqs = [];
         
     otherwise
@@ -188,7 +193,7 @@ end
 
 %% Calculate Population Synchrony Coupling
 overlap = p.Results.synchwin/synchdt;
-[spikemat,t_synch] = SpktToSpkmat(spiketimes, [], synchdt,overlap);
+[spikemat,t_synch] = SpktToSpkmat(spiketimes, [t_LFP(end)], synchdt,overlap);
 
 spikemat = IsolateEpochs2(spikemat,int,0,1/synchdt);
 t_synch = IsolateEpochs2(t_synch,int,0,1/synchdt);
@@ -228,7 +233,7 @@ end
 
 %% Calculate Cell Rate-Power Correlation
 ratedt = round(1/max(frange),3);
-[spikemat,t_rate] = SpktToSpkmat(spiketimes, [], ratedt,2);
+[spikemat,t_rate] = SpktToSpkmat(spiketimes, [t_LFP(end)], ratedt,2);
 
 spikemat = IsolateEpochs2(spikemat,int,0,1/ratedt);
 t_rate = IsolateEpochs2(t_rate,int,0,1/ratedt);
@@ -253,6 +258,7 @@ spikephaseangle = cat(1,spikephaseangle{:});
 function [phmag,phangle] = spkphase(spktimes_fn)
     %Spike Times have to be column vector
         if isrow(spktimes_fn); spktimes_fn=spktimes_fn'; end
+        if isempty(spktimes_fn); phmag=nan;phangle=nan; return; end
 
     %Take only spike times in intervals
     spktimes_fn = spktimes_fn(InIntervals(spktimes_fn,int));

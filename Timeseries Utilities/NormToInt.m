@@ -45,7 +45,7 @@ switch normtype
         colmax = max(int_data,[],1);
         normdata = bsxfun(@(X,Y) X./Y,data,colmax);
     case 'percentile'
-        sortdata = sort(int_data);
+        sortdata = unique(sort(int_data));
         percentiles = linspace(0,1,length(sortdata));
         normdata = interp1(sortdata,percentiles,data,'nearest');
     otherwise
