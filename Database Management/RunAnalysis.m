@@ -75,9 +75,9 @@ for rr = 1:numrecs
         eval([outputNames{ss} '= results{ss};']);
     end
     
-    recname = recordingname{rr};
+    %recname = recordingname{rr};
     save([figfolder,recordingname{rr},'_',analysisfunction],...
-    outputNames{:},'recname')
+    outputNames{:})%,'recname')
     
     close all
 end
