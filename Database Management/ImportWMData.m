@@ -1,4 +1,4 @@
-function [  ] = ImportWMData(abffilename,savematfilename)
+function [  ] = ImportWMData(abffilename,savematfilename,cellnum,recnum)
 %UNTITLED Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -15,7 +15,7 @@ t = t_si*si;              %Time vector in seconds
 
 %must be more than 5 minutes
         if t(end) <= 60*5
-            continue
+            keyboard
         end
 
 
@@ -34,13 +34,13 @@ t_down = downsample(t,downsample_factor);
 
 %Isolate SOM Spikes from Cell Attached Recording 
 %NOTE: Manually Improved by William, given better spikes in database
-savename = ['SpikeFigs/',...
-    celltype,num2str(cellnum),'_',num2str(recnum),'_spikefig'];
-[SOM_spindices, SOM_spikes,t_wave,spikewaves,pt] = IsolateSpikes(SOM,...
-    sampfreq,savename);
-SOM_spindices_down = round(SOM_spindices/downsample_factor);
-SOM_spikes_down = zeros(size(SOM_down));
-SOM_spikes_down(SOM_spindices_down) = 1;
+% savename = ['SpikeFigs/',...
+%     'SOM',num2str(cellnum),'_',num2str(recnum),'_spikefig'];
+% [SOM_spindices, SOM_spikes,t_wave,spikewaves,pt] = IsolateSpikes(SOM,...
+%     sampfreq,savename);
+% SOM_spindices_down = round(SOM_spindices/downsample_factor);
+% SOM_spikes_down = zeros(size(SOM_down));
+% SOM_spikes_down(SOM_spindices_down) = 1;
 
 %Extract MUA from the LFP
 [MUA_spindices,MUA_spikes,MUAPower,MUA,MUA_srate] = LFP2MUA(LFP,sampfreq);
@@ -60,8 +60,8 @@ recdata.si_raw = si;
 recdata.LFP = LFP_down;
 recdata.MUA = MUA_spindices*si;
 recdata.EMG = EMG_down;
-recdata.spikes = SOM_spindices*si;
-recdata.peak_to_trough = pt;
+%recdata.spikes = SOM_spindices*si;
+%recdata.peak_to_trough = pt;
 recdata.cellnum = cellnum;
 recdata.recnum = recnum;
     
@@ -110,8 +110,8 @@ wh_off_t = wh_off*si_down;
 
 recdata.wh_on = wh_on_t;
 recdata.wh_off = wh_off_t;
-recdata.srate_mean = srate_mean;
-recdata.srate_std = srate_std;
+% recdata.srate_mean = srate_mean;
+% recdata.srate_std = srate_std;
 
 save(savematfilename,'recdata')
 end
