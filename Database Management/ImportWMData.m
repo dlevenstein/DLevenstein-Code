@@ -13,10 +13,10 @@ sampfreq = 1/si;          %Sampling frequency
 t_si = [0:length(LFP)-1];   %Time vector in samples
 t = t_si*si;              %Time vector in seconds
 
-%must be more than 5 minutes
-        if t(end) <= 60*5
-            keyboard
-        end
+%must be more than 3 minutes
+%         if t(end) <= 60*3
+%             keyboard
+%         end
 
 
 %Filter the EMG        
