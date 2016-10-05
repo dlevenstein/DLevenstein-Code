@@ -14,11 +14,12 @@ function [ filt_data, amp, phase ] = FiltNPhase(data,fbounds,sampfreq,varargin)
 
 %Filter order to pass to fir1. higher order improves frequency resolution
 %but also increases computing time substantially.
-%default: 3 cycles of low bound freq
+%default: 4 cycles of low bound freq
+%note: default updataed to 4 from 3 cycles on 10/5/16
 if nargin == 4
     num_cyc = varargin{1};
 else
-    num_cyc = 3;
+    num_cyc = 4;
 end
 
 low_bound = 1/fbounds(1);   %Low bound period

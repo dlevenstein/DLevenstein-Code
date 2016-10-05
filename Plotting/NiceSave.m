@@ -8,7 +8,7 @@ function [  ] = NiceSave(figname,figfolder,recname)
 set(gcf,'PaperOrientation','landscape');
 set(gcf,'PaperUnits','normalized');
 set(gcf,'PaperPosition',[0 0 1 1]);
-saveas(gcf,[figfolder,recname,'_',figname],'pdf') ;
+saveas(gcf,[figfolder,'/',recname,'_',figname],'pdf') ;
 
 end
 
