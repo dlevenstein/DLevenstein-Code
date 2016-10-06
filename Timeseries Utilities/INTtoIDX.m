@@ -27,7 +27,7 @@ IDX = zeros(len,1);
 
 numstates = length(INT);
 for ss = 1:numstates
-    stateints = INT{ss};
+    stateints = round(INT{ss});
     numints = length(stateints(:,1));
     for ii = 1:numints
         IDX(stateints(ii,1):stateints(ii,2))=ss;

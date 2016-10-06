@@ -12,6 +12,9 @@ function [ INT ] = IDXtoINT( IDX ,numstates)
 %
 %DLevenstein 2015-16
 %%
+if islogical(IDX)
+    IDX = double(IDX); 
+end
 
 if ~exist('numstates','var')
     numstates = max(IDX);
