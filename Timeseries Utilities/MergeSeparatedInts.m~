@@ -1,4 +1,4 @@
-function [ newints,mergedidx ] = MergeSeparatedInts( ints,minseparation )
+function [ ints,mergedidx ] = MergeSeparatedInts( ints,minseparation )
 %[ ints ] = MergeSeparatedInts( ints,minseparation ) merges close or
 %overlapping intervals with a minimum separation.
 %
@@ -20,20 +20,19 @@ function [ newints,mergedidx ] = MergeSeparatedInts( ints,minseparation )
 %Sort Ints by their end times so all intervals end before the
 %next interval ends
 [~,sort_ints] = sort(ints(:,2));
-newints = ints(sort_ints,:);
-mergedidx = num2cell(sort_ints);
+ints = ints(sort_ints,:);
+mergedidx = cell(sort_ints);
 
 %Find ints that start before a minimum separation after the end of the 
 %previous interval
-intseparation = newints(2:end,1)-newints(1:end-1,2);
+intseparation = ints(2:end,1)-ints(1:end-1,2);
 smallsep = find(intseparation<=minseparation);
 
 for s = flipud(smallsep)'   %Go backwards from last ints to first ones
-    newints(s,2) = newints(s+1,2);  %Take the later end time between the ints
-    newints(s,1) = min(newints(s+1,1),newints(s,1)); %Take the earlier start time between the ints
-    newints(s+1,:) = [];       %Remove the merged interval
-    mergedidx{s} = [mergedidx{s} mergedidx{s+1}];
-    mergedidx(s+1) = [];
+    ints(s,2) = ints(s+1,2);  %Take the later end time between the ints
+    ints(s,1) = min(ints(s+1,1),ints(s,1)); %Take the earlier start time between the ints
+    ints(s+1,:) = [];       %Remove the merged interval
+    mergedidx{s}
 end
 
 end

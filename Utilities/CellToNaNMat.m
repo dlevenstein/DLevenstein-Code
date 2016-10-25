@@ -23,6 +23,12 @@ epochlengths = cellfun(@length,epochcell);
 numepochs = length(epochcell);
 maxlength = max(epochlengths);
 
+if numepochs==0
+    NaNMat = [];
+    t_align = [];
+    return
+end
+
 %For uniform alignment/cut times.
 if length(alignto)==1
     alignto = repmat(alignto,1,numepochs);
