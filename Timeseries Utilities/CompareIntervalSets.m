@@ -23,12 +23,6 @@ function [allintcorr,intcorr] = CompareIntervalSets(intset1,intset2,varargin)
 %
 %Last Updated: 9/23/15
 %DLevenstein
-%% DEV
-% load('/Users/dlevenstein/Dropbox/Science/buzsaki lab/data analysis/Database/BWData/20140526_277um/20140526_277um_StateIntervals.mat')
-% intset1 = {StateIntervals.Wake,StateIntervals.SWS,StateIntervals.REM};
-% load('/Users/dlevenstein/Dropbox/Science/buzsaki lab/data analysis/Database/BWData/20140526_277um/20140526_277um_Intervals.mat')
-% intset2 = intervals([1,3,5]);
-% varargin = {'nulltimes',0};
 %%
 if isa(intset1{1},'intervalSet')
     for ii = 1:length(intset1)

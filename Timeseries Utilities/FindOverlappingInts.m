@@ -1,13 +1,23 @@
-function [ int1overlap, int2overlap ] = FindOverlappingInts( ints1,ints2 )
-%UNTITLED3 Summary of this function goes here
-%   Detailed explanation goes here6
-%% Test
-% testints1 = [0 3; 5 6; 7 10; 13 15; 14.4 14.5];
-% testints2 = [1 4; 4.5 7; 12 13; 14 15];
-% ints1 = testints1;
-% ints2 = testints2;
-
+function [int1overlap,int2overlap] = FindOverlappingInts(ints1,ints2)
+%[int1overlap,int2overlap] = FindOverlappingInts(ints1,ints2) finds
+%intervals in sets ints1 and ints2 that overlap in time. Returns logicals
+%that indicate which intervals in the sets have an interval in the other
+%set that is at the same time.
 %%
+if isempty(ints1) && isempty(ints2)
+    int1overlap = [];
+    int2overlap = [];
+    return
+elseif isempty(ints1)
+    int1overlap = [];
+    int2overlap = zeros(size(ints2(:,1)));
+    return
+elseif isempty(ints2)
+    int1overlap = zeros(size(ints1(:,1)));
+    int2overlap = [];
+    return
+end
+
 numints1 = length(ints1(:,1));
 numints2 = length(ints2(:,1));
 
