@@ -1,9 +1,13 @@
-function [ ccghist,ccgbins ] = EventCCG(events1,events2)
+function [ ccghist,ccgbins ] = EventCCG(events1,events2,timeparms)
 %EventCCG(events1,events2)
 %
 %INPUTS
 %   events1/2   vector of event times or [Nints x 2] interval start and
 %               end times.
+%   timeparms.
+%       twin      (s) (before/after)
+%       numbins   (before/after)
+%       normbins  (within start-end)
 %
 %OUPUTS
 %               if event times, calculates standard event CCG (times of
@@ -14,24 +18,32 @@ function [ ccghist,ccgbins ] = EventCCG(events1,events2)
 %               time (i.e. a time axis looks like:
 %               -1s---S----E---+1
 %
+%
 %TO DO
 %-inputParser
 %
 %DLevenstein 2016
 %% Parms (to be made input options with inputParser)
-twin = 3; %s (before/after)
-numbins = 30; %(before/after)
+twin = timeparms.twin; 
+numbins = timeparms.numbins; %
 binsize = (twin*2)./numbins; 
-normbins = 5;  %(within start-end)
+normbins = timeparms.normbins;  %(within start-end)
 %NOTE: need to renormalize histogram to counts/time
 
 
 %%
-if isrow(events1);
+if isrow(events1) && length(events1)>2
     events1 = events1';
 end
-if isrow(events2)
+if isrow(events2) && length(events2)>2
     events2 = events2';
+end
+
+if isempty(events1)
+    ccgbins = linspace(-twin,twin,numbins);
+    ccghist = nan(size(ccgbins));
+%    keyboard
+    return
 end
 
 event2type = length(events2(1,:));
@@ -58,7 +70,9 @@ switch event2type
             
             %Standard CCG
             case 1 
-                [ccghist, ccgbins] = hist(relativetime,numbins);
+                ccgbins = linspace(-twin,twin,numbins+1);
+                ccgbins = ccgbins(1:end-1)+0.5.*diff(ccgbins([1 2]));
+                [ccghist] = hist(relativetime,ccgbins);
                 ccghist = ccghist./(binsize*numE1);
                 
                 figure
@@ -71,7 +85,9 @@ switch event2type
                 internalevents = sign(relativetime(:,1))==1 & sign(relativetime(:,2))==-1;
                 internaltime = relativetime(internalevents,1)./(relativetime(internalevents,1)-relativetime(internalevents,2));
                 %Histogram of internal events.
-                [internalhist,internalbins] = hist(internaltime,normbins);
+                internalbins = linspace(0,1,normbins+1);
+                internalbins = internalbins(1:end-1)+0.5.*diff(internalbins([1 2]));
+                [internalhist] = hist(internaltime,internalbins);
                 totalinternaltime = sum(events1(:,2)-events1(:,1));
                 internalhist = internalhist./(totalinternaltime./normbins);
 
@@ -81,7 +97,9 @@ switch event2type
                 whichone = sub2ind(size(relativetime),1:length(whichone),whichone');
                 relativetime = relativetime(whichone);
                 
-                [ccghist, ccgbins] = hist(relativetime,numbins);
+                ccgbins = linspace(-twin,twin,numbins+1);
+                ccgbins = ccgbins(1:end-1)+0.5.*diff(ccgbins([1 2]));
+                [ccghist] = hist(relativetime,ccgbins);
                 ccghist = ccghist./(binsize*numE1);
                 ccgbins(ccgbins>0) = ccgbins(ccgbins>0)+1;
                 

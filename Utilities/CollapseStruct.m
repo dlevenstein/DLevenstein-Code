@@ -60,6 +60,7 @@ for ff = 1:length(fields)
         structout.(currentfield) = cat(dim,structin(:).(currentfield));
         catch
             keyboard
+            continue
         end
     end
 
@@ -70,8 +71,10 @@ for ff = 1:length(fields)
             structout.(currentfield) = nanmean(structout.(currentfield),dim);
         case 'median'
             structout.(currentfield) = nanmedian(structout.(currentfield),dim);
-        case'std'
+        case 'std'
             structout.(currentfield) = nanstd(structout.(currentfield),[],dim);
+        case 'sem'
+            structout.(currentfield) =  nanstd(structout.(currentfield),[],dim)./sqrt(sum(~isnan(structout.(currentfield)),dim));
     end
 end
 
