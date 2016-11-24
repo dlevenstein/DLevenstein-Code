@@ -46,7 +46,17 @@ if isempty(events1)
     return
 end
 
-event2type = length(events2(1,:));
+if isempty(events2)
+%     ccgbins = linspace(-twin,twin,numbins);
+%     ccghist = zeros(size(ccgbins));
+% %    keyboard
+%    return
+    event2type = 1;
+else
+    event2type = length(events2(1,:));
+end
+
+
 event1type = length(events1(1,:));
 
 numE1 = length(events1(:,1));
@@ -120,8 +130,8 @@ switch event2type
     %Calculates CCG for event2 start and end times separately
     case 2  
 
-        [event2startccg,ccgbins] = EventCCG(events1,events2(:,1));
-        [event2endccg,ccgbins] = EventCCG(events1,events2(:,2));
+        [event2startccg,ccgbins] = EventCCG(events1,events2(:,1),timeparms);
+        [event2endccg,ccgbins] = EventCCG(events1,events2(:,2),timeparms);
         ccghist = [event2startccg;event2endccg];
 
         figure    
