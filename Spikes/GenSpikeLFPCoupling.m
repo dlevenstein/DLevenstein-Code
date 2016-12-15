@@ -232,7 +232,7 @@ for pp = 1:numpop
 end
 
 %% Calculate Cell Rate-Power Correlation
-ratedt = round(1/max(frange),3);
+ratedt = round(1/min(frange),3);
 [spikemat,t_rate] = SpktToSpkmat(spiketimes, [t_LFP(end)], ratedt,2);
 
 spikemat = IsolateEpochs2(spikemat,int,0,1/ratedt);

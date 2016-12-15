@@ -1,4 +1,4 @@
-function [normdata,intmean,intstd] = NormToInt(data,int,sf,normtype)
+function [normdata,intmean,intstd] = NormToInt(data,int,sf,normtype,varargin)
 %NormToInt(data,int,sf) normalizes the data to the mean and standard
 %deviation of the data in intervals int
 %
@@ -7,9 +7,13 @@ function [normdata,intmean,intstd] = NormToInt(data,int,sf,normtype)
 %   int     [Nints x 2] reference interval onsets and offset times within  
 %           which to Z score the data to (optional)
 %   sf      (optional) sampling frequency of the data. default 1
-%   normtype 'mean' or 'Z' or 'max'
+%   normtype 'mean', 'Z', 'max', 'percentile', 'modZ' for modified Z-score
 %
 %DLevenstein Summer 2016
+%%
+SHOWFIG = false;
+
+
 %%
 if ~exist('int','var') || isempty(int)
     int = [1 size(data,1)];
@@ -36,6 +40,9 @@ end
 intmean = nanmean(int_data);
 intstd = nanstd(int_data);
 
+intmedian = median(int_data);
+intMAD = mad(int_data,1);
+
 switch normtype
     case 'Z'
         normdata = (data-repmat(intmean,length(data(:,1)),1))./repmat(intstd,length(data(:,1)),1);
@@ -48,8 +55,19 @@ switch normtype
         sortdata = unique(sort(int_data));
         percentiles = linspace(0,1,length(sortdata));
         normdata = interp1(sortdata,percentiles,data,'nearest');
+    case 'modZ'
+        normdata = 0.6745*(data-repmat(intmedian,length(data(:,1)),1))./repmat(intMAD,length(data(:,1)),1);
     otherwise
         display('normtype should be ''Z'' or ''mean''')
+end
+
+%%
+if SHOWFIG
+    figure
+        subplot(2,1,1)
+            plot(data,normdata,'.')
+        subplot(2,1,2)
+            hist(int_data)
 end
 
 
