@@ -34,18 +34,18 @@ switch corrtype
     case 'pearson'
         [R,p] = corr(x,y);
         corrtext = ['R = ',num2str(round(R,3))];
-        correlation = R;signif = p;
+        correlation = R; signif = p;
     case 'spearman'
         [rho,p] = corr(x,y,'type','Spearman');
-         corrtext = ['\rho = ',num2str(round(rho,3))];
-         correlation = rho;signif = p;
+         corrtext = ['\rho = ',num2str(round(rho,2))];
+         correlation = rho; signif = p;
 end
 
 
 
 switch sig
     case 'p0'
-        sigtext = ['   p = ',num2str(p)];
+        sigtext = ['   p = ',num2str(round(p,3))];
         
     case 'conf'
         %Confidence Interval

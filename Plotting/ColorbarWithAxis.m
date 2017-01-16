@@ -12,9 +12,10 @@ function [ ] = ColorbarWithAxis(cbounds,label,varargin)
 labelloc = 'side';
 scale = 'lin';
 
+barlocation = 'east';
 
 %%
-cb = colorbar;
+cb = colorbar(barlocation);
 
 if isstring(cbounds); switch cbounds
         case '3std'

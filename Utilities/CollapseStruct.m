@@ -55,6 +55,8 @@ for ff = 1:length(fields)
     elseif iscell(structin(1).(currentfield)) & NEST %For cell array in field
         structout.(currentfield) = cat(1,structin(:).(currentfield));
         structout.(currentfield) = cat(dim,structout.(currentfield){:});
+    elseif isstring(structin(1).(currentfield)) & NEST %For string in field
+        structout.(currentfield) = {structin(:).(currentfield)};
     else %For simple array in field
         try
         structout.(currentfield) = cat(dim,structin(:).(currentfield));
