@@ -1,4 +1,4 @@
-function [corrmat,sites] = LFPPairMat(varargin)
+function [corrmat,sites,h] = LFPPairMat(varargin)
 %LFPPairMat(lfpfilename,varargin) calculates the pairwise relation (options
 %below) between all LFP channels
 %
@@ -19,6 +19,8 @@ function [corrmat,sites] = LFPPairMat(varargin)
 %                   computing time but increases RAM pressure
 %       'randint'   saves time by selecting a random subset of time to
 %                   calculate pairwise metric within - default... ???
+%       'basepath'  location of files, default is undeclared
+%       'basename'  name of recordings, default is undeclared
 %
 %OUTPUTS
 %   corrmat         matrix of pairwise relationships
@@ -30,6 +32,28 @@ function [corrmat,sites] = LFPPairMat(varargin)
 %   -clean up metric implementation 
 %
 %% inputParse for Optional Inputs and Defaults
+frange = 'gamma';
+a = 1;
+while a<length(varargin);
+    if isa(varargin{1},'char')
+        switch varargin{a}
+            case 'frange'
+                frange = varargin{a+1};
+                varargin(a:a+1) = [];
+                a = a-1;
+            case 'basepath'
+                basepath = varargin{a+1};
+                varargin(a:a+1) = [];
+                a = a-1;
+            case 'basename'
+                basename = varargin{a+1};
+                varargin(a:a+1) = [];
+                a = a-1;
+        end    
+    end
+    a = a+1;
+end
+
 p = inputParser;
 
 defaultFMA = true;
@@ -47,14 +71,14 @@ defaultMetric = 'ISPC';
 validMetrics = {'filtcorr','corr','powercorr','ISPC'};
 checkMetric = @(x) any(validatestring(x,validMetrics));
 
-defaultFrange = 'gamma';
-validFranges = {'delta','theta','spindles','gamma','ripples'};
-checkFrange = @(x) any(validatestring(x,validFranges)) || size(x) == [1,2];
+% defaultFrange = 'gamma';
+% validFranges = {'delta','theta','spindles','gamma','ripples'};
+% checkFrange = @(x) any(validatestring(x,validFranges)) || size(x) == [1,2];
 
 
 addParameter(p,'ints',defaultInts,checkInts)
 addParameter(p,'metric',defaultMetric,checkMetric)
-addParameter(p,'frange',defaultFrange,checkFrange)
+% addParameter(p,'frange',defaultFrange,checkFrange)
 addParameter(p,'channels',defaultChannels,checkChannels);
 addParameter(p,'numload',defaultNumload,@isnumeric);
 
@@ -64,7 +88,11 @@ parse(p,varargin{:})
 %if using FMA Toolbox and A current session hasn't been declared, open an
 %FMA session
 % if FMA && ~exist('DATA','var')
-%     SetCurrentSession
+if exist('basepath','var') && exist('basename','var')
+    SetCurrentSession(fullfile(basepath,basename))
+else
+    SetCurrentSession
+end
 % end
 %%
 numload = p.Results.numload/2;
@@ -86,7 +114,8 @@ for ss1 = 1:numgroups
     
     %filter LFPss1 for power
     if ~strcmp(p.Results.metric,'corr')
-        LFPss1 = FilterLFP(LFPss1,'passband',p.Results.frange);
+%         LFPss1 = FilterLFP(LFPss1,'passband',p.Results.frange);
+        LFPss1 = FilterLFP(LFPss1,'passband',frange);
 
         if strcmp(p.Results.metric,'ISPC')
             [LFPss1,~] = Phase(LFPss1);
@@ -115,7 +144,8 @@ for ss1 = 1:numgroups
         LFPss2 = double(GetLFP(p.Results.channels(group2ind),'intervals',p.Results.ints));
         %filter LFPss2 for power.... make this all case/switch
         if ~strcmp(p.Results.metric,'corr')
-            LFPss2 = FilterLFP(LFPss2,'passband',p.Results.frange);
+%             LFPss2 = FilterLFP(LFPss2,'passband',p.Results.frange);
+            LFPss2 = FilterLFP(LFPss2,'passband',frange);
             
             if strcmp(p.Results.metric,'ISPC')
                 [LFPss2,~] = Phase(LFPss2);
@@ -137,14 +167,15 @@ for ss1 = 1:numgroups
         corrmat(group2ind,group1ind) = corrmat(group1ind,group2ind)'; %symmetry :D
         toc
         %%
-        figure
-        imagesc(corrmat)
-        colorbar
     end
  
    %%
 
 end
+
+h = figure;
+imagesc(corrmat)
+colorbar
 
 
 
