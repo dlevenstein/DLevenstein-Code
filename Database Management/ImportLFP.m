@@ -61,7 +61,7 @@ end
     %SleepScore the data from source and save in dropbox database
     SleepScoreMaster(sourcefolder{ss},recordingname{ss},...
         'savedir',datasetfolder{ss},'spindledelta',false,...
-        'scoretime',scoretime,'overwrite',true)
+        'scoretime',scoretime,'overwrite',false)
     close all
     
     
@@ -80,6 +80,7 @@ end
     
     CleanAndCopyRegionalLFP(datasetfolder{ss},recordingname{ss},sourcefolder{ss},...
         [SWchannum,THchannum],scoretime)
+
 
 end
 
