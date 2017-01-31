@@ -4,6 +4,8 @@ function [spikemat,t,spindices] = SpktToSpkmat(spiketimes, T, dt,overlap)
 % matrix.
 %
 %INPUTS
+%   spiketimes  1 x N_neurons cell array of spiketimes 
+%               or N_spikes x 2 vector of times and cell IDs.
 %Options for T:
 %T = [t_end]
 %T = [t_start t_end]                %For additional start time (t_start<0)
@@ -25,21 +27,22 @@ function [spikemat,t,spindices] = SpktToSpkmat(spiketimes, T, dt,overlap)
 %
 %Last Updated: 9/25/15
 %DLevenstein
+%% Deal With Input Type Variability
 
+%Spike times is in the form [spiketimes(:,1) cellnum(:,2)]
+if isa(spiketimes,'numeric') && size(spiketimes,2)==2
+    cellnums = unique(spiketimes(:,2));
+    for cc = cellnums'
+        spiketimestemp{cc} = spiketimes(spiketimes(:,2)==cc,1);
+    end
+    spiketimes = spiketimestemp;
+end
 
 numcells = length(spiketimes);
 if numcells == 0
     spikemat=[];t=[];spindices=[];
     return
 end
-
-% if isa(spiketimes,'tsdArray')
-%     for c = 1:numcells
-%         spiketimestemp{c} = Range(spiketimes{c},'s');
-%     end
-%     spiketimes = spiketimestemp;
-%     clear spiketimestemp
-% end
 
 %Spiketimes can be: tsdArray of cells, cell array of cells, cell array of
 %tsdArrays (multiple populations)
@@ -72,6 +75,7 @@ elseif isa(spiketimes,'cell') && isa(spiketimes{1},'tsdArray')
     subpop = 'done';
 end
 
+%Time Window
 if length(T) == 1
     t_start = 0; t_offset = 0; t_end = T;
 elseif length(T) == 2
@@ -84,7 +88,7 @@ else
     display('T must be 1 2 or 3 elemements or 0')
 end
 
-
+%%
 
 numts = ceil((t_end-t_start)/dt);
 

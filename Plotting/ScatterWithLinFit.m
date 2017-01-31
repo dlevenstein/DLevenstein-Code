@@ -4,7 +4,7 @@ function [correlation,signif] = ScatterWithLinFit( x,y,color,varargin )
 %% Options/Defaults
 
 sig = 'p0';
-corrtype = 'spearman';
+corrtype = 'pearson';
 
 
 %%
@@ -70,6 +70,7 @@ lsline
 xbouns = get(gca,'Xlim');
 ybouns = get(gca,'ylim');
 textloc = [xbouns(1),ybouns(2) - 0.1*(ybouns(2)-ybouns(1))];
+textloc = [xbouns(1)+ 0.05*(xbouns(2)-xbouns(1)),ybouns(2) + 0.05*(ybouns(2)-ybouns(1))];
 text(textloc(1),textloc(2),{[corrtext,sigtext]},'color',props.color)
 xlim(xbouns);ylim(ybouns);
 end

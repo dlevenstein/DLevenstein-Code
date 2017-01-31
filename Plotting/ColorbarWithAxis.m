@@ -12,7 +12,7 @@ function [ ] = ColorbarWithAxis(cbounds,label,varargin)
 labelloc = 'side';
 scale = 'lin';
 
-barlocation = 'east';
+barlocation = 'eastoutside';
 
 %%
 cb = colorbar(barlocation);

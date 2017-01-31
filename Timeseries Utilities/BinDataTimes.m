@@ -1,5 +1,5 @@
 function [ bincenters,binmeans,binstd,binnum ] = BinDataTimes( data,times,binedges,varargin )
-%[ bincenters,binmeans,binstd,binnum ] = BinDataTimes( data,times,binedges,varargin )
+%[ bincenters,binmeans,binstd,binnum ] = BinDataTimes( data,times,binedges )
 %%
 numbins = length(binedges)-1;
 numdatacols = length(data(1,:));
