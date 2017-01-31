@@ -114,6 +114,8 @@ elseif isa(spiketimes,'cell') && isa(spiketimes{1},'tsdArray')
     spiketimes = cat(2,spiketimes{:});
     numcells = length(spiketimes);
     subpop = 'done';
+elseif isa(spiketimes,'cell')
+    numcells = length(spiketimes);
 end
 
 if isa(int,'intervalSet')
