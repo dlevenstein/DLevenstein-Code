@@ -5,7 +5,10 @@
 %    [ccg,t] = CCG(times,groups,<options>)
 %
 %    times          times of all events (sorted)
+%                   (alternate) - can be {Ncells} array of [Nspikes] 
+%                   spiketimes for each cell
 %    groups         group IDs for each event in time list
+%                   (alternate) - []
 %    <options>      optional list of property-value pairs (see table below)
 %
 %    =========================================================================
@@ -32,6 +35,18 @@ function [ccg,t] = CCG(times,groups,varargin)
 duration = 2;
 binSize = 0.01;
 Fs = 1/20000;
+
+% Option for spike times to be in {Ncells} array of spiketimes DL2017
+if iscell(times) && isempty(groups)
+    numcells = length(times);
+    for cc = 1:numcells
+        groups{cc}=cc.*ones(size(times{cc}));
+    end
+    times = cat(1,times{:}); groups = cat(1,groups{:});
+    [times,sortidx] = sort(times);
+    groups = groups(sortidx);
+end
+
 
 % Check parameters
 if nargin < 2,

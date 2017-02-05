@@ -4,7 +4,7 @@ function [correlation,signif] = ScatterWithLinFit( x,y,color,varargin )
 %% Options/Defaults
 
 sig = 'p0';
-corrtype = 'pearson';
+corrtype = 'spearman';
 
 
 %%
@@ -65,6 +65,7 @@ end
 %%
 props.color = color;
 plot(x,y,'.','Color',props.color,'markersize',10)
+axis tight
 lsline
 
 xbouns = get(gca,'Xlim');

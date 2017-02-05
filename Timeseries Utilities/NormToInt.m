@@ -31,6 +31,7 @@ end
 
 
 int = round(int*sf);
+int(int==0)=1; %Turn time=0 to the first indexed datapoint
 
 int_data = [];
 for ii = 1:numints
