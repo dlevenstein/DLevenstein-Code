@@ -215,11 +215,16 @@ for pp = 1:numpop
     popsynch_onepochs = IsolateEpochs2(popsynch,onints,0,1/synchdt);
     popsynchPETH(pp).onset = mean(cat(2,popsynch_onepochs{:}),2);
     popsynchPETH(pp).t_on = [-twin(1):synchdt:twin(2)]';
-    
-    %% Onset
+    [popsynchPETH(pp).onhist,popsynchPETH(pp).histbins] = hist3([repmat(popsynchPETH(pp).t_on,length(popsynch_onepochs),1),...
+        cat(1,popsynch_onepochs{:})],{popsynchPETH(pp).t_on,linspace(0,1,numpopcells+1)});
+    popsynchPETH(pp).onhist = popsynchPETH(pp).onhist./length(popsynch_onepochs);
+    %% Offset
     popsynch_offepochs = IsolateEpochs2(popsynch,offints,0,1/synchdt);
     popsynchPETH(pp).offset = mean(cat(2,popsynch_offepochs{:}),2);
     popsynchPETH(pp).t_off = [-twin(2):synchdt:twin(1)]';
+    [popsynchPETH(pp).offhist,popsynchPETH(pp).histbins] = hist3([repmat(popsynchPETH(pp).t_off,length(popsynch_offepochs),1),...
+        cat(1,popsynch_offepochs{:})],{popsynchPETH(pp).t_off,linspace(0,1,numpopcells+1)});
+    popsynchPETH(pp).offhist = popsynchPETH(pp).offhist./length(popsynch_offepochs);
 end
 
 if isempty(int)
