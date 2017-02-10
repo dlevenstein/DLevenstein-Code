@@ -1,6 +1,9 @@
 function [thresh,cross,bihist] = BimodalThresh(bimodaldata)
-%UNTITLED Summary of this function goes here
-%   Detailed explanation goes here
+%[thresh,cross,bihist] = BimodalThresh(bimodaldata) takes bimodal time
+%series data, calculates the threshold between the modes (i.e. UP vs DOWN states),
+%and returns the crossing times (i.e. UP/DOWN onset/offset times)
+%
+%DLevenstein Spring 2016
 %%
 numpeaks = 1;
 numbins = 10; 

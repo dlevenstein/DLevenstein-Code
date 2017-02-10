@@ -10,6 +10,7 @@ function [spikemat,t,spindices] = SpktToSpkmat(spiketimes, T, dt,overlap)
 %T = [t_end]
 %T = [t_start t_end]                %For additional start time (t_start<0)
 %T = [t_start t_offset t_end]       %If t=0 is at aribtrary time t_offset
+%   dt          time step of our output spikemat
 %
 %Overlap = if want to multiple count spikes in overlapping bins.
 %   Note: overlap should be even... fix this
