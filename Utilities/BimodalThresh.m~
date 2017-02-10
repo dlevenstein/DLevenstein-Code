@@ -9,11 +9,8 @@ function [thresh,cross,bihist] = BimodalThresh(bimodaldata)
 %OUTPUS
 %   thresh          threshold
 %   cross
-%       .upints     intervals of UP states [onsets offsets]
-%       .downints   intervals of DOWN states [onsets offsets]
-%   bihist
-%       .bins       bin centers
-%       .hist       counts
+%       .upints     intervals of UP states
+%       .downints   intervals of DOWN states
 %
 %DLevenstein Spring 2016
 %%
