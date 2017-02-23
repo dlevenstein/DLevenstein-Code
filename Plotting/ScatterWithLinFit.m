@@ -1,6 +1,8 @@
 function [correlation,signif] = ScatterWithLinFit( x,y,color,varargin )
-%UNTITLED Summary of this function goes here
-%   Detailed explanation goes here
+%[correlation,signif] = ScatterWithLinFit( x,y,color,varargin )
+%
+%
+%
 %% Options/Defaults
 
 sig = 'p0';

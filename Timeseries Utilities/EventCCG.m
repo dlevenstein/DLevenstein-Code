@@ -1,5 +1,5 @@
 function [ ccghist,ccgbins ] = EventCCG(events1,events2,timeparms)
-%EventCCG(events1,events2)
+%[ ccghist,ccgbins ] = EventCCG(events1,events2,timeparms)
 %
 %INPUTS
 %   events1/2   vector of event times or [Nints x 2] interval start and
@@ -72,7 +72,7 @@ switch event2type
         relativetime = [];
         for ee = 1:numE1
             relevantwindow = events1(ee,:) + twin*[-1 1];
-            relevantevents = events2>relevantwindow(1) & events2<relevantwindow(2);
+            relevantevents = events2>=relevantwindow(1) & events2<=relevantwindow(2);
             relativetime = [relativetime; bsxfun(@(X,Y) X-Y,events2(relevantevents),events1(ee,:))];
         end
         

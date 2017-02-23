@@ -25,7 +25,7 @@ end
 
 
 numints = length(int(:,1));
-if ~exist('sf','var')
+if ~exist('sf','var')|| isempty(sf)
     sf = 1;
 end
 

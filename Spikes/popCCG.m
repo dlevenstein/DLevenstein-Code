@@ -1,6 +1,5 @@
-function [ ccg,ccgt,ccgnorm,shufflemean,shufflestd ] = CCGshuffle( spiketimes,shufftype,numshuff,CCGparms )
-%UNTITLED Summary of this function goes here
-%   Detailed explanation goes here
+function [popccg,ccgt] = popCCG( spiketimes,CCGparms )
+%[popccg,ccgt] = popCCG( spiketimes,CCGparms )
 %
 %CCGparms
 %    =========================================================================
@@ -10,32 +9,44 @@ function [ ccg,ccgt,ccgnorm,shufflemean,shufflestd ] = CCGshuffle( spiketimes,sh
 %     'duration'    duration in s of each xcorrelogram (default = 2)
 %    =========================================================================
 %
+%OUTPUT
+%   popccg  population CCG in units of spks/spk/cell/s
+%
 %DLevenstein Feb2017 - wrapper on FMA toolbox 
 %%
-%binsize = 0.01;
-[ccg,ccgt] = CCG(spiketimes,[],CCGparms{:});
+
+%Calculate all ccgs
+[allccg,ccgt] = CCG(spiketimes,[],CCGparms{:});
+
+
+
 
 %%
-ccg_shuff = zeros([size(ccg) numshuff]);
-for ss = 1:numshuff
-    %ss
-    switch shufftype
-        case 'CellID'
-            [ spiketimes_shuffle ] = ShuffleSpikelabels(spiketimes);
-        case 'jitter'
-            jitterwin = 0.15; %...need an input for this... see also
-            %jonathan's work showing that spike times should be jittered
-            %with in a time bin, not around the center of a spike
-             [ spiketimes_shuffle ] = JitterSpiketimes(spiketimes,jitterwin);
-    end
-    ccg_shuff(:,:,:,ss) = CCG(spiketimes_shuffle,[],CCGparms{:});
+numcells = length(spiketimes);
+binsize = diff(ccgt(1:2));
+popccg = zeros(length(ccgt),numcells);
+
+for cc = 1:numcells
+    %Remove ACG
+    allccg(:,cc,cc) = zeros(size(allccg(:,cc,cc)));
+    %Add the CCGs of all other cells around reference cell
+    popccg(:,cc) = sum(allccg(:,cc,:),3);
+    
+    %Normalize to number of spikes,cells,timebin
+    numspks = length(spiketimes{cc});
+    popccg(:,cc) = popccg(:,cc)./numspks./(numcells-1)./binsize;
 end
 
-shufflemean = mean(ccg_shuff,4);
-shufflestd = std(ccg_shuff,[],4);
+%%
+figure
+imagesc(ccgt,[0 1],(popccg(:,sortccgCM))')
+hold on
+plot([0 0],[0 1],'w--')
+plot(sort(ccgCM),(1:numcells)/numcells,'r')
+axis xy
+colorbar
+xlim([-0.2 0.2])
 
-ccgnorm = (ccg-shufflemean)./shufflestd;
-ccgsig = abs(ccgnorm)>3;
 %% Figure for example CCG
 % numcells = length(spiketimes);
 % figure
