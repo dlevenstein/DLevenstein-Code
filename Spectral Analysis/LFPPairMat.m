@@ -110,7 +110,7 @@ for ss1 = 1:numgroups
     display(['ss1: ',num2str(ss1),' of ',num2str(numgroups)])
     group1ind = find(groups==ss1);
     %loadLFPss1 - load numload at a time?
-    LFPss1 = double(GetLFP(p.Results.channels(group1ind),'intervals',p.Results.ints));
+    LFPss1 = double(GetLFP(sites(group1ind),'intervals',p.Results.ints));
     
     %filter LFPss1 for power
     if ~strcmp(p.Results.metric,'corr')
