@@ -26,11 +26,11 @@ function [spikemat,t,spindices] = SpktToSpkmat(spiketimes, T, dt,overlap)
 %   only spikes within a given time
 %
 %
-%Last Updated: 9/25/15
-%DLevenstein
+%DLevenstein 2015
 %% Deal With Input Type Variability
 
-%Spike times is in the form [spiketimes(:,1) cellnum(:,2)]
+%If spike times is in the form [spiketimes(:,1) cellnum(:,2)], convert to
+%cell array
 if isa(spiketimes,'numeric') && size(spiketimes,2)==2
     cellnums = unique(spiketimes(:,2));
     for cc = cellnums'
@@ -39,6 +39,8 @@ if isa(spiketimes,'numeric') && size(spiketimes,2)==2
     spiketimes = spiketimestemp;
 end
 
+%Take stock of the cells - if there are no cells that's silly, but doesn't
+%break.
 numcells = length(spiketimes);
 if numcells == 0
     spikemat=[];t=[];spindices=[];
@@ -89,7 +91,7 @@ else
     display('T must be 1 2 or 3 elemements or 0')
 end
 
-%%
+%% The Meat of the function
 
 numts = ceil((t_end-t_start)/dt);
 

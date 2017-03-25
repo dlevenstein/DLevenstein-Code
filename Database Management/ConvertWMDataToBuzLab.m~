@@ -1,0 +1,45 @@
+function [] = ConvertWMDataToBuzLab(datasetfolder,recname,figfolder)
+%UNTITLED5 Summary of this function goes here
+%   Detailed explanation goes here
+%%
+
+datasetfolder = '/Users/dlevenstein/Dropbox/Research/Datasets/WMData/';
+figfolder = '/Users/dlevenstein/Dropbox/Research/Current Projects/SlowOscillation/AnalysisScripts/QW_DwellTimeMatchingAnalysis/';
+recname = 'SOMCell3';
+
+
+load(fullfile(datasetfolder,[recname,'.mat']))
+
+
+%Remove empty recordings
+emptyrecs = cellfun(@(X) isempty(X),{celldata.recnum});
+celldata(emptyrecs) = [];
+
+lengthadd = cellfun(@(X) X(end),{celldata.t})+celldata(1).si;
+lengthadd = cumsum([0 lengthadd]);
+
+
+for rr = 1:length(celldata)
+    celldata(rr).t = celldata(rr).t'+lengthadd(rr);
+    celldata(rr).spikes = celldata(rr).spikes'+lengthadd(rr);
+    celldata(rr).MUA = celldata(rr).MUA+lengthadd(rr);
+    celldata(rr).wh_on = celldata(rr).wh_on'+lengthadd(rr);
+    celldata(rr).wh_off = celldata(rr).wh_off'+lengthadd(rr);
+    celldata(rr).NWh_on = celldata(rr).NWh_on'+lengthadd(rr);
+    celldata(rr).NWh_off = celldata(rr).NWh_off'+lengthadd(rr);
+
+end
+celldata = CollapseStruct(celldata,1);
+celldata.si = celldata.si(1);
+
+%%
+
+mkdir(datasetfolder,recname);
+savedir = fullfile(datasetfolder,recname);
+%%
+
+spiketimes.spikes = celldata.spikes;
+
+
+
+end
