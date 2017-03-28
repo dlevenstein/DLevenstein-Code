@@ -3,15 +3,26 @@ function [ pupildilation ] = GetPupilDilation( baseName )
 %   Detailed explanation goes here
 %Note: you may need gstreamer: https://gstreamer.freedesktop.org/download/
 
-%baseName = '20170303_1';
+baseName = 'Layers_LFP_Test02_170323_151411';
 recordingsfolder = 'C:\Users\rudylabadmin\Desktop\layers\Recordings';
+recordingsfolder = '/mnt/proraidDL/Database/WMProbeData';
 
 addpath(fullfile(recordingsfolder,baseName));
 
 vidName = fullfile(recordingsfolder,baseName,[baseName,'.avi']);
 abfname = fullfile(recordingsfolder,baseName,[baseName,'.abf']);
+analogName = fullfile(recordingsfolder,baseName,['analogin.dat']);
 
 savefile = fullfile(recordingsfolder,baseName,[baseName,'.pupildiameter.behavior.mat']);
+savevid = fullfile(recordingsfolder,baseName,[baseName,'.pupilvid.avi']);
+
+SAVEVID = true;
+savevidfr = 10;
+if SAVEVID
+    pupdiamVid = VideoWriter(savevid);
+    pupdiamVid.FrameRate = 1./(0.015.*savevidfr);
+    open(pupdiamVid);
+end
 %%
 %Load in the video (has to be in not .avi for now...)
 pupilvidobj = VideoReader(vidName);
@@ -98,20 +109,24 @@ end
     %Get the pupil - all pixels below intensity threshold (black)
     pupil=~im2bw(vidframe,intensitythresh);
 
+    if SAVEVID && mod(ff,savevidfr)==0; 
+        subplot(4,4,9);imagesc(pupil); end
     %Show the thresholded image
-   % subplot(4,4,9)
-   % imagesc(pupil)
+
     
     %Remove small objects and holes (i.e. dark/bright spots)
     pupil=bwmorph(pupil,'close');
-    %subplot(4,4,10);imagesc(pupil)
+    if SAVEVID && mod(ff,savevidfr)==0; 
+         subplot(4,4,10);imagesc(pupil); end
     
     pupil=bwmorph(pupil,'open');
-   % subplot(4,4,11);imagesc(pupil)
+    if SAVEVID && mod(ff,savevidfr)==0; 
+         subplot(4,4,11);imagesc(pupil); end
     
     pupil=bwareaopen(pupil,pupilsizethresh);
     pupil=imfill(pupil,'holes');
-   % subplot(4,4,12);imagesc(pupil);
+    if SAVEVID && mod(ff,savevidfr)==0; 
+         subplot(4,4,12);imagesc(pupil); end
 
     % Tagged objects in BW image
     L=bwlabel(pupil);
@@ -132,51 +147,97 @@ end
     centro=round(out_a(pam).Centroid);
     X=centro(1);
     Y=centro(2);
-    
-%     subplot(2,2,1)
-%     imagesc(vidframe_orig);
-%     hold on
-%     rectangle('Position',out_a(pam).BoundingBox,'EdgeColor',[1 0 0],...
-%         'Curvature', [1,1],'LineWidth',1)
-%     plot(X,Y,'g+')
+  
+    if SAVEVID && mod(ff,savevidfr)==0;  
+    subplot(2,2,1)
+    imagesc(vidframe_orig);
+    hold on
+    rectangle('Position',out_a(pam).BoundingBox,'EdgeColor',[1 0 0],...
+        'Curvature', [1,1],'LineWidth',1)
+    plot(X,Y,'g+')
+    hold off
+    end
     
     pupcoords(ff,1) = X; pupcoords(ff,2) = Y;
     
-    
-  %  subplot(4,1,4)
-  %  plot(1:ff,puparea(1:ff),'k')
+   if SAVEVID && mod(ff,savevidfr)==0;  
+   subplot(4,1,4)
+   plot(1:ff,puparea(1:ff),'k')
+   end
      
+   if SAVEVID && mod(ff,savevidfr)==0;
+       imgFrame = getframe(gcf);
+       writeVideo(pupdiamVid,imgFrame.cdata);
+   end
 end
 
+close(pupdiamVid)
+
 %0-1 Normalize
+puparea_pxl = puparea;
 puparea = (puparea-min(puparea))./(max(puparea)-min(puparea));
 
 %% Load the .abf for the timestamps
 
-timepulses = abfload(abfname);
-timepulses = timepulses(:,1);
+timepulses = readmulti(analogName,1);
 
-sf_abf = 1./20000; %Sampling Frequency of the .abf file
-t_abf = [1:length(timepulses)]'.*sf_abf;
+sf_pulse = 1./20000; %Sampling Frequency of the .abf file
+t_pulse = [1:length(timepulses)]'.*sf_pulse;
 
-pulsethreshold =1;  %Adjust later to set based on input.
+pulsethreshold =1e4;  %Adjust this later to set based on input.
 pulseonsets = find(diff(timepulses<pulsethreshold)==1);
-pulset = t_abf(pulseonsets);
+pulset = t_pulse(pulseonsets);
+
+expectedpulserate = 0.015;
+%%
+shortpulses=diff(pulset)<(0.5.*expectedpulserate);
+pulset(shortpulses) = [];
+
+% longpulses=diff(pulset)>(2.*expectedpulserate);
+% pulset(longpulses) = [];
+
+%hist(diff(pulset))
+
+%%
+% timepulses = abfload(abfname);
+% timepulses = timepulses(:,1);
+% 
+% sf_abf = 1./20000; %Sampling Frequency of the .abf file
+% t_abf = [1:length(timepulses)]'.*sf_abf;
+% 
+% pulsethreshold =1;  %Adjust this later to set based on input.
+% pulseonsets = find(diff(timepulses<pulsethreshold)==1);
+% pulset = t_abf(pulseonsets);
+% 
+% 
+% pulset(1) = []; %remove the first trigger... make this more rigorous later 
 
 %Check that the number of identified pulses = the number of frames
-if length(pulset)~=length(puparea); keyboard; end
+if length(pulset)~=length(puparea); 
+    display('WARNING: NUMBER OF FRAMES DON"T MATCH!!!    v sad.');%keyboard; 
+end
 
 %%
 figure
-plot(t_abf,timepulses,'k')
+plot(t_pulse,timepulses,'k')
 hold on
 plot(pulset,zeros(size(pulset)),'r+')
+
+%%
+figure
+plot(puparea)
+%%
+
+
+
 
 
 %% Behavior struct
 
-pupildilation.t = pulset;
+pupildilation.t_abf = pulset;
+%pupildilation.t_interp;
 pupildilation.puparea = puparea;
+pupildilation.puparea_pxl = puparea_pxl;
 pupildilation.pupcoords = pupcoords;
 pupildilation.mask = mask;
 
