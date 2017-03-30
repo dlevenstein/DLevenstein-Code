@@ -92,7 +92,7 @@ end
         irispixels  = vidframe(~mask & ~ pupilmask); 
         
        % keyboard
-        pupilsizethresh = 50; %Pupil must be larger than this many pixels.
+        pupilsizethresh = 40; %Pupil must be larger than this many pixels.
         
         % Histograms of iris and pupil
 %         figure
@@ -189,7 +189,7 @@ pulseonsets = find(diff(timepulses<pulsethreshold)==1);
 pulset = t_pulse(pulseonsets);
 
 expectedpulserate = 0.015;
-%%
+
 shortpulses=diff(pulset)<(0.5.*expectedpulserate);
 pulset(shortpulses) = [];
 
@@ -199,18 +199,18 @@ pulset(shortpulses) = [];
 %hist(diff(pulset))
 
 %%
-% timepulses = abfload(abfname);
-% timepulses = timepulses(:,1);
-% 
-% sf_abf = 1./20000; %Sampling Frequency of the .abf file
-% t_abf = [1:length(timepulses)]'.*sf_abf;
-% 
-% pulsethreshold =1;  %Adjust this later to set based on input.
-% pulseonsets = find(diff(timepulses<pulsethreshold)==1);
-% pulset = t_abf(pulseonsets);
-% 
-% 
-% pulset(1) = []; %remove the first trigger... make this more rigorous later 
+timepulses = abfload(abfname);
+timepulses = timepulses(:,1);
+
+sf_abf = 1./20000; %Sampling Frequency of the .abf file
+t_pulse = [1:length(timepulses)]'.*sf_abf;
+
+pulsethreshold =1;  %Adjust this later to set based on input.
+pulseonsets = find(diff(timepulses<pulsethreshold)==1);
+pulset = t_pulse(pulseonsets);
+
+
+pulset(1) = []; %remove the first trigger... make this more rigorous later 
 
 %Check that the number of identified pulses = the number of frames
 if length(pulset)~=length(puparea); 
@@ -224,6 +224,11 @@ hold on
 plot(pulset,zeros(size(pulset)),'r+')
 
 %%
+trange = pulset([1 end]);
+numframes = length(puparea);
+t_interp = linspace(trange(1),trange(2),numframes)';
+
+%%
 figure
 plot(puparea)
 %%
@@ -234,8 +239,8 @@ plot(puparea)
 
 %% Behavior struct
 
-pupildilation.t_abf = pulset;
-%pupildilation.t_interp;
+pupildilation.t_pulse = pulset;
+pupildilation.t_interp = t_interp;
 pupildilation.puparea = puparea;
 pupildilation.puparea_pxl = puparea_pxl;
 pupildilation.pupcoords = pupcoords;
