@@ -1,22 +1,23 @@
-function [ pupildilation ] = GetPupilDilation( baseName )
+function [ pupildilation ] = GetPupilDilation( baseName,basePath )
 %UNTITLED Summary of this function goes here
 %   Detailed explanation goes here
 %Note: you may need gstreamer: https://gstreamer.freedesktop.org/download/
 
-baseName = 'Layers_LFP_Test02_170323_151411';
-recordingsfolder = 'C:\Users\rudylabadmin\Desktop\layers\Recordings';
-recordingsfolder = '/mnt/proraidDL/Database/WMProbeData';
+%baseName = 'VideoFrame_Test_50Hz_20000_170328_173154';
+%recordingsfolder = 'C:\Users\rudylabadmin\Desktop\layers\Recordings';
+%recordingsfolder = '/mnt/proraidDL/Database/WMProbeData';
 
-addpath(fullfile(recordingsfolder,baseName));
 
-vidName = fullfile(recordingsfolder,baseName,[baseName,'.avi']);
-abfname = fullfile(recordingsfolder,baseName,[baseName,'.abf']);
-analogName = fullfile(recordingsfolder,baseName,['analogin.dat']);
+addpath(fullfile(basePath,baseName));
 
-savefile = fullfile(recordingsfolder,baseName,[baseName,'.pupildiameter.behavior.mat']);
-savevid = fullfile(recordingsfolder,baseName,[baseName,'.pupilvid.avi']);
+vidName = fullfile(basePath,baseName,[baseName,'.avi']);
+abfname = fullfile(basePath,baseName,[baseName,'.abf']);
+analogName = fullfile(basePath,baseName,['analogin.dat']);
 
-SAVEVID = true;
+savefile = fullfile(basePath,baseName,[baseName,'.pupildiameter.behavior.mat']);
+savevid = fullfile(basePath,baseName,[baseName,'.pupilvid.avi']);
+
+SAVEVID = false;
 savevidfr = 10;
 if SAVEVID
     pupdiamVid = VideoWriter(savevid);
@@ -171,7 +172,8 @@ end
    end
 end
 
-close(pupdiamVid)
+%Close the video object
+if SAVEVID; close(pupdiamVid); end
 
 %0-1 Normalize
 puparea_pxl = puparea;
@@ -198,21 +200,21 @@ pulset(shortpulses) = [];
 
 %hist(diff(pulset))
 
-%%
-timepulses = abfload(abfname);
-timepulses = timepulses(:,1);
+%% Clampex Pulses
+% timepulses = abfload(abfname);
+% timepulses = timepulses(:,1);
+% 
+% sf_abf = 1./20000; %Sampling Frequency of the .abf file
+% t_pulse = [1:length(timepulses)]'.*sf_abf;
+% 
+% pulsethreshold =0.5;  %Adjust this later to set based on input.
+% pulseonsets = find(diff(timepulses<pulsethreshold)==1);
+% pulset = t_pulse(pulseonsets);
 
-sf_abf = 1./20000; %Sampling Frequency of the .abf file
-t_pulse = [1:length(timepulses)]'.*sf_abf;
 
-pulsethreshold =1;  %Adjust this later to set based on input.
-pulseonsets = find(diff(timepulses<pulsethreshold)==1);
-pulset = t_pulse(pulseonsets);
+%pulset(1) = []; %remove the first trigger... make this more rigorous later 
 
-
-pulset(1) = []; %remove the first trigger... make this more rigorous later 
-
-%Check that the number of identified pulses = the number of frames
+%% Check that the number of identified pulses = the number of frames
 if length(pulset)~=length(puparea); 
     display('WARNING: NUMBER OF FRAMES DON"T MATCH!!!    v sad.');%keyboard; 
 end
@@ -228,9 +230,6 @@ trange = pulset([1 end]);
 numframes = length(puparea);
 t_interp = linspace(trange(1),trange(2),numframes)';
 
-%%
-figure
-plot(puparea)
 %%
 
 
