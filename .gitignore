@@ -56,3 +56,6 @@ Temporary Items
 *.m~
 #Vim and other text editor tmp files
 *.swp
+
+#Parfor Progress file
+parfor_progress.txt
