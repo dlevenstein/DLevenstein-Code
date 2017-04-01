@@ -88,8 +88,8 @@ parfor nn = 1:numsims
     %% Calculate Frequency Spectrum
     
     fspec(nn).freqlist = logspace(-3,1,numfreqs);
-    window = 2000;
-    noverlap = 500;
+    window = 5000;
+    noverlap = 4000;
     window = window/dt;
     noverlap = noverlap/dt;
     [FFTspec,FFTfreqs,t_FFT] = spectrogram(r,window,noverlap,fspec(nn).freqlist,1/dt);
