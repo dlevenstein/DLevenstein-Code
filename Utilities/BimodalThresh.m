@@ -1,4 +1,4 @@
-function [thresh,cross,bihist] = BimodalThresh(bimodaldata)
+function [thresh,cross,bihist] = BimodalThresh(bimodaldata,maxthresh)
 %[thresh,cross,bihist] = BimodalThresh(bimodaldata) takes bimodal time
 %series data, calculates the threshold between the modes (i.e. UP vs DOWN states),
 %and returns the crossing times (i.e. UP/DOWN onset/offset times)
@@ -17,6 +17,14 @@ function [thresh,cross,bihist] = BimodalThresh(bimodaldata)
 %
 %DLevenstein Spring 2016
 %%
+if ~exist('maxthresh','var')
+    maxthresh = inf;
+end
+
+%Remove data over the threshold... this is klugey
+overmax = bimodaldata>=maxthresh;
+bimodaldata(overmax) = nan;
+
 numpeaks = 1;
 numbins = 10; 
 while numpeaks ~=2
