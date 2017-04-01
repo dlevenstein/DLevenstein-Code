@@ -179,7 +179,7 @@ if SAVEVID; close(pupdiamVid); end
 puparea_pxl = puparea;
 puparea = (puparea-min(puparea))./(max(puparea)-min(puparea));
 
-%% Load the .abf for the timestamps
+%% Load the analogin for the timestamps
 
 timepulses = readmulti(analogName,1);
 

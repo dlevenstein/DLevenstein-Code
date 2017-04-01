@@ -2,12 +2,12 @@ function [ UPDOWNstates ] = DetectLFPeakDOWN( spiketimes,filtLFP,sf_LFP,detectio
 %UNTITLED2 Summary of this function goes here
 %   Detailed explanation goes here
 %
-%detectionparms : minOFF,mininterOFF, peakthresh (STD), peakdist
+%detectionparms : minOFF,mininterOFF, peakthresh (STD), peakdist (currently
+%hardcoded)
 %
 %Current issue: does not account for spurious spikes in the middle of DOWN
 %states...
 %% DEV
-
 %datasetfolder = '/Users/dlevenstein/Dropbox/Research/Datasets/WMData/';
 %figfolder = '/Users/dlevenstein/Dropbox/Research/Current Projects/SlowOscillation/AnalysisScripts/QW_DwellTimeMatchingAnalysis/';
 %recname = 'SOMCell3';
@@ -20,6 +20,20 @@ function [ UPDOWNstates ] = DetectLFPeakDOWN( spiketimes,filtLFP,sf_LFP,detectio
 %spiketimes = {celldata(2).MUA,celldata(2).spikes'};
 %detectints = [celldata(2).NWh_on' celldata(2).NWh_off'];
 
+
+%% DEV for buzcode...
+% baseName = 'DT2_rPPC_rCCG_362um_218um_20160209_160209_183610';
+% baseFolder ='/mnt/proraidDL/Database/DTData/';
+% LFPchan = 12;
+% SpikeGroups = 1:5
+% 
+% 
+% lfpName = fullfile(baseFolder,baseName,[baseName.lfp]);
+% 
+
+
+
+%%
 t_LFP = (1:length(filtLFP))./sf_LFP;
 minOFF = 0.025; %ms
 mininterOFF = 0.03; %ms

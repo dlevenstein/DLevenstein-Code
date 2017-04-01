@@ -5,6 +5,12 @@ function [ R_data ] = RMSEnvelope( data, width, si )
 %   -make work for vector of either orientation...
 %
 %Last Updated: 3/23/15
+%%
+
+%Make sure data is in row form
+dataCOL = false;
+if iscolumn(data); dataCOL = true; data = data'; end
+
 
 %Gaussian window
 wind_x = [-2.5*width:si:2.5*width];
@@ -21,6 +27,10 @@ M_data = FConv(window,S_data);
 
 %Root
 R_data = sqrt(M_data);
+
+
+if dataCOL;  R_data = R_data';  end
+
 
 end
 
