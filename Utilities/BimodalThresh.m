@@ -26,7 +26,7 @@ overmax = bimodaldata>=maxthresh;
 bimodaldata(overmax) = nan;
 
 numpeaks = 1;
-numbins = 10; 
+numbins = 12; 
 while numpeaks ~=2
     [bihist.hist,bihist.bins]= hist(bimodaldata,numbins);
 
