@@ -3,11 +3,11 @@ function [ Wij ] = LogNWeightMat( p,mu,sig,N,maxw )
 %   Detailed explanation goes here
 %% DEV
 
-p = 0.2;
-mu = 1;
-sig = 0.5;
-N = 1000;
-maxw = 15;
+%p = 0.2;
+%mu = 1;
+%sig = 0.5;
+%N = 1000;
+%maxw = 15;
 
 %%
 Wij = exp(sig.*randn(N)+mu);

@@ -1,10 +1,15 @@
-function [thresh,cross,bihist] = BimodalThresh(bimodaldata,maxthresh)
+function [thresh,cross,bihist] = BimodalThresh(bimodaldata,varargin)
 %[thresh,cross,bihist] = BimodalThresh(bimodaldata) takes bimodal time
 %series data, calculates the threshold between the modes (i.e. UP vs DOWN states),
 %and returns the crossing times (i.e. UP/DOWN onset/offset times)
 %
 %INPUTS
 %   bimodaldata     vector of bimodal data
+%
+%       (optional)  for optional inputs, use: ('inputoption', inputvalue)
+%       'maxthresh' sets a maximum threshold
+%       'Schmidt'   Schmidt trigger uses halfway points between trough and 
+%                   lower/upper peaks for DOWN/UP state thresholds
 %
 %OUTPUS
 %   thresh          threshold
@@ -16,9 +21,19 @@ function [thresh,cross,bihist] = BimodalThresh(bimodaldata,maxthresh)
 %       .hist       counts
 %
 %DLevenstein Spring 2016
+%-Updated Spring 2017 to include Schmidt trigger, maxthresh
 %%
-if ~exist('maxthresh','var')
-    maxthresh = inf;
+%Optional input defaults
+maxthresh = inf;
+Schmidt = false;
+
+for i = 1:length(varargin)
+	switch(lower(varargin{i}))
+        case 'maxthresh'
+            maxthresh = varargin{i+1};
+        case 'schmidt'
+            Schmidt = true;
+    end
 end
 
 %Remove data over the threshold... this is klugey
@@ -26,7 +41,7 @@ overmax = bimodaldata>=maxthresh;
 bimodaldata(overmax) = nan;
 
 numpeaks = 1;
-numbins = 12; 
+numbins = 10; 
 while numpeaks ~=2
     [bihist.hist,bihist.bins]= hist(bimodaldata,numbins);
 
@@ -44,11 +59,38 @@ betweenpeaks = bihist.bins(LOCS(1):LOCS(2));
 
 thresh = betweenpeaks(diploc);
 
-%%
-overind = bimodaldata>thresh;
 
-crossup = find(diff(overind)==1);
-crossdown = find(diff(overind)==-1);
+%%
+
+%The Schmidt trigger uses thresholds halfway between trough and peak
+%on each end
+if Schmidt
+    threshUP = thresh + 0.5.*(betweenpeaks(end)-thresh);
+    threshDOWN = thresh + 0.5.*(betweenpeaks(1)-thresh);
+    
+    overUP = bimodaldata>threshUP;
+    overDOWN = bimodaldata>threshDOWN;
+    
+    crossup = find(diff(overUP)==1);
+    crossdown = find(diff(overDOWN)==-1);
+    
+    %Delete incomplete (repeat) crossings
+    allcrossings = [crossup ones(size(crossup)) ;...
+        crossdown zeros(size(crossdown))];
+    [~,sortorder] = sort(allcrossings(:,1));
+    allcrossings = allcrossings(sortorder,:);
+    updownswitch = diff(allcrossings(:,2));
+    samestate = find(updownswitch==0)+1;
+    allcrossings(samestate,:)=[];
+    
+    crossup = allcrossings(allcrossings(:,2)==1,1);
+    crossdown = allcrossings(allcrossings(:,2)==0,1);
+    
+else
+    overind = bimodaldata>thresh;
+    crossup = find(diff(overind)==1);
+    crossdown = find(diff(overind)==-1);
+end
 
 %If there's only one crossing...
 if isempty(crossup) || isempty(crossdown)
