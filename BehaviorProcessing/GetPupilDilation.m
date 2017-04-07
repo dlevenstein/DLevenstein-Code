@@ -15,7 +15,7 @@ abfname = fullfile(basePath,baseName,[baseName,'.abf']);
 analogName = fullfile(basePath,baseName,['analogin.dat']);
 
 savefile = fullfile(basePath,baseName,[baseName,'.pupildiameter.behavior.mat']);
-savevid = fullfile(basePath,baseName,[baseName,'.pupilvid.avi']);
+savevid = fullfile(basePath,baseName,DetectionFigures,[baseName,'.pupilvid.avi']);
 
 SAVEVID = false;
 savevidfr = 10;
@@ -190,10 +190,12 @@ pulsethreshold =1e4;  %Adjust this later to set based on input.
 pulseonsets = find(diff(timepulses<pulsethreshold)==1);
 pulset = t_pulse(pulseonsets);
 
-expectedpulserate = 0.015;
+minpulsedur = 0.003; %Remove double/noise crossings
 
-shortpulses=diff(pulset)<(0.5.*expectedpulserate);
+shortpulses=diff(pulset)<(minpulsedur);
 pulset(shortpulses) = [];
+
+interpulse = diff(pulset);
 
 % longpulses=diff(pulset)>(2.*expectedpulserate);
 % pulset(longpulses) = [];
@@ -221,9 +223,13 @@ end
 
 %%
 figure
+subplot(2,1,1)
 plot(t_pulse,timepulses,'k')
 hold on
 plot(pulset,zeros(size(pulset)),'r+')
+
+subplot(2,1,2)
+hist(interpulse)
 
 %%
 trange = pulset([1 end]);

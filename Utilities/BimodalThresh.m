@@ -10,6 +10,9 @@ function [thresh,cross,bihist] = BimodalThresh(bimodaldata,varargin)
 %       'maxthresh' sets a maximum threshold
 %       'Schmidt'   Schmidt trigger uses halfway points between trough and 
 %                   lower/upper peaks for DOWN/UP state thresholds
+%       'maxhistbins' Maximum number of hist bins to try before giving up
+%       'startbins'  minimum number of hist bins (initial hist)
+%       'setthresh'     set your own threshold
 %
 %OUTPUS
 %   thresh          threshold
@@ -26,13 +29,23 @@ function [thresh,cross,bihist] = BimodalThresh(bimodaldata,varargin)
 %Optional input defaults
 maxthresh = inf;
 Schmidt = false;
+maxhistbins = 25;
+SETTHRESH = false;
+starthistbins = 10;
 
 for i = 1:length(varargin)
 	switch(lower(varargin{i}))
         case 'maxthresh'
             maxthresh = varargin{i+1};
+        case 'maxhistbins'
+            maxhistbins = varargin{i+1};
+        case 'startbins'
+            starthistbins = varargin{i+1};
         case 'schmidt'
             Schmidt = true;
+        case 'setthresh'
+            thresh = varargin{i+1};
+            SETTHRESH = true;
     end
 end
 
@@ -41,7 +54,7 @@ overmax = bimodaldata>=maxthresh;
 bimodaldata(overmax) = nan;
 
 numpeaks = 1;
-numbins = 10; 
+numbins = starthistbins; 
 while numpeaks ~=2
     [bihist.hist,bihist.bins]= hist(bimodaldata,numbins);
 
@@ -49,7 +62,7 @@ while numpeaks ~=2
     LOCS = sort(LOCS)-1;
     numbins = numbins+1;
     numpeaks = length(LOCS);
-    if numbins==25
+    if numbins==maxhistbins && ~SETTHRESH
     	cross.upints = []; cross.downints = []; thresh=nan; return
     end
 end
@@ -57,7 +70,13 @@ end
 betweenpeaks = bihist.bins(LOCS(1):LOCS(2));
 [dip,diploc] = findpeaks(-bihist.hist(LOCS(1):LOCS(2)),'NPeaks',1,'SortStr','descend');
 
+if ~SETTHRESH
 thresh = betweenpeaks(diploc);
+end
+
+    
+
+
 
 
 %%
