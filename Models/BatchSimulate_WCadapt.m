@@ -72,7 +72,7 @@ parfor nn = 1:numsims
     tempstruct_rate.std = std(r);
     
     %% Calculate DWELL times
-    [tempstruct_rate.thresh,cross,~] = BimodalThresh(r);
+    [tempstruct_rate.thresh,cross,~] = BimodalThresh(r,'Schmidt');
     
     if isempty(cross.upints) || length(cross.upints) <=2
         tempstruct_dwell.UP = nan;
