@@ -7,10 +7,8 @@ function [ behavior ] = bz_LoadBehavior( behaviorName,baseName,datasetPath )
 %%
 
 behaviorfile = fullfile(datasetPath,baseName,[baseName,'.',behaviorName,'.behavior.mat']);
+evalin('caller',['load(''',behaviorfile,''')']);
 
-evalin('base',['load(''',behaviorfile,''')']);
-
-%assignin('base',statesName
 
 end
 
