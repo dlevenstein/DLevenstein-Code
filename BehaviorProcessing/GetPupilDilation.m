@@ -7,15 +7,21 @@ function [ pupildilation ] = GetPupilDilation( baseName,basePath )
 %recordingsfolder = 'C:\Users\rudylabadmin\Desktop\layers\Recordings';
 %recordingsfolder = '/mnt/proraidDL/Database/WMProbeData';
 
+%%
+
+if nargin==0
+    [basePath,baseName] = fileparts(pwd);
+end
+
 
 addpath(fullfile(basePath,baseName));
 
-vidName = fullfile(basePath,baseName,[baseName,'.avi']);
+vidName = fullfile(basePath,baseName,[baseName,'.m4v']);
 abfname = fullfile(basePath,baseName,[baseName,'.abf']);
 analogName = fullfile(basePath,baseName,['analogin.dat']);
 
 savefile = fullfile(basePath,baseName,[baseName,'.pupildiameter.behavior.mat']);
-savevid = fullfile(basePath,baseName,DetectionFigures,[baseName,'.pupilvid.avi']);
+savevid = fullfile(basePath,baseName,'DetectionFigures',[baseName,'.pupilvid.avi']);
 
 SAVEVID = false;
 savevidfr = 10;
@@ -89,22 +95,34 @@ end
         
         h = imfreehand;
         pupilmask = createMask(h);
-        pupilpixels = vidframe(pupilmask); 
-        irispixels  = vidframe(~mask & ~ pupilmask); 
+        pupilpixels = double(vidframe(pupilmask))./255; 
+        irispixels  = double(vidframe(~mask & ~ pupilmask))./255; 
+        eyepixels = double(vidframe(~mask))./255; 
+        
+        intensitybins = linspace(0,1,40);
+        pupilhist = hist(pupilpixels,intensitybins);
+        irishist = hist(irispixels,intensitybins);
+        eyehist = hist(eyepixels,intensitybins);
         
        % keyboard
         pupilsizethresh = 40; %Pupil must be larger than this many pixels.
-        
-        % Histograms of iris and pupil
-%         figure
-%             hist(double(irispixels)./255)
-%             hold on
-%             hist(double(pupilpixels)./255)
-%             plot(mean(double(pupilpixels)./255).*[1 1],get(gca,'ylim'),'k')
-%             plot(mean(double(pupilpixels)./255)+1.*std(double(pupilpixels)./255).*[1 1],get(gca,'ylim'),'k')
+        intensitythresh = mean(pupilpixels)+1.*std(pupilpixels); 
         %%
+        
+        
+        subplot(2,2,4)
+        bar(intensitybins,eyehist)
+        hold on
+        plot(intensitybins,irishist,'g','linewidth',2)
+        plot(intensitybins,pupilhist,'r','linewidth',2)
+        plot([1 1].*intensitythresh,get(gca,'ylim'),'r--')
+        xlim([0 1])
+        
+       %Show eye with over/under pixels. allow user to select threshold and show new over/under 
+        
+          %%
         %Pupil must be darker than this intensity: 2.5std above mean pupil
-        intensitythresh = mean(double(pupilpixels)./255)+2.*std(double(pupilpixels)./255); 
+        
     end
         
     %Get the pupil - all pixels below intensity threshold (black)
@@ -175,8 +193,9 @@ end
 %Close the video object
 if SAVEVID; close(pupdiamVid); end
 
-%0-1 Normalize
+%0-1 Normalize, smooth
 puparea_pxl = puparea;
+%puparea = smooth(puparea,smoothwin);
 puparea = (puparea-min(puparea))./(max(puparea)-min(puparea));
 
 %% Load the analogin for the timestamps
