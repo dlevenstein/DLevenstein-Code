@@ -119,6 +119,7 @@ end
         xlim([0 1])
         
        %Show eye with over/under pixels. allow user to select threshold and show new over/under 
+       %Use ROC? curve to get best threshold initially
         
           %%
         %Pupil must be darker than this intensity: 2.5std above mean pupil
