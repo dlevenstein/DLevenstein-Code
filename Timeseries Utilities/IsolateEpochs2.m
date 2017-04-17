@@ -14,8 +14,11 @@ function [epochs,droppedints] = IsolateEpochs2(data,int,win,sf,varargin)
 %           include.  can be [Nint x 1] or [1 x 1]
 %   sf      sampling frequency (Hz)
 %
-%   includeNaN      (optional) if 'includeNaN', then pad over/underhanging
+%   'includeNaN'      (optional) if 'includeNaN', then pad over/underhanging
 %                   epochs with NaN
+%   'discrete           (optional) then sf is a vector of time points 
+%                   corresponding to the data, as opposed to sampling
+%                   frequency
 %
 %OUTPUT
 %   -epochs cell array of extracted epochs
