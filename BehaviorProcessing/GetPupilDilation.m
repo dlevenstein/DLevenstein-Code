@@ -12,6 +12,7 @@ function [ pupildilation ] = GetPupilDilation( baseName,basePath )
 if nargin==0
     [basePath,baseName] = fileparts(pwd);
 end
+%%
 
 
 addpath(fullfile(basePath,baseName));
@@ -23,7 +24,7 @@ analogName = fullfile(basePath,baseName,['analogin.dat']);
 savefile = fullfile(basePath,baseName,[baseName,'.pupildiameter.behavior.mat']);
 savevid = fullfile(basePath,baseName,'DetectionFigures',[baseName,'.pupilvid.avi']);
 
-SAVEVID = false;
+SAVEVID = true;
 savevidfr = 10;
 if SAVEVID
     pupdiamVid = VideoWriter(savevid);
@@ -44,7 +45,7 @@ puparea = nan(NumberOfFrames,1);
 pupcoords = nan(NumberOfFrames,2);
 
 %Loop through the frames and get pupil location/area
- figure
+pupfig = figure;
  colormap('gray')
 for ff = 1:NumberOfFrames 
 %ff = 1;
@@ -106,6 +107,7 @@ end
         
        % keyboard
         pupilsizethresh = 40; %Pupil must be larger than this many pixels.
+        %Pupil must be darker than this intensity: 2.5std above mean pupil
         intensitythresh = mean(pupilpixels)+1.*std(pupilpixels); 
         %%
         
@@ -122,10 +124,14 @@ end
        %Use ROC? curve to get best threshold initially
         
           %%
-        %Pupil must be darker than this intensity: 2.5std above mean pupil
         
+        
+    
+
+        
+        set(pupfig,'visible','off')   
     end
-        
+     
     %Get the pupil - all pixels below intensity threshold (black)
     pupil=~im2bw(vidframe,intensitythresh);
 
@@ -194,14 +200,18 @@ end
 %Close the video object
 if SAVEVID; close(pupdiamVid); end
 
-%0-1 Normalize, smooth
+
+%0-1 Normalize, smooth the pupil area trace 
+%(make window in units of seconds or figure out the best # frames)
+smoothwin = 10;  %frames
 puparea_pxl = puparea;
-%puparea = smooth(puparea,smoothwin);
+puparea = smooth(puparea,smoothwin);
 puparea = (puparea-min(puparea))./(max(puparea)-min(puparea));
 
 %% Load the analogin for the timestamps
 
 timepulses = readmulti(analogName,1);
+%LoadBinary('uint16')
 
 sf_pulse = 1./20000; %Sampling Frequency of the .abf file
 t_pulse = [1:length(timepulses)]'.*sf_pulse;
