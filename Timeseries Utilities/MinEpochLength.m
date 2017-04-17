@@ -21,7 +21,7 @@ epoch_length = E - S;
 epoch_length_t = epoch_length*si;
 
 %Which epochs are longer than min_length
-bigEpoch_indices = find(epoch_length_t > min_length);
+bigEpoch_indices = find(epoch_length_t >= min_length);
 
 S = S(bigEpoch_indices);
 E = E(bigEpoch_indices);
