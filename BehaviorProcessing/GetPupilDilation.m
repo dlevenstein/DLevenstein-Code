@@ -7,6 +7,11 @@ function [ pupildilation ] = GetPupilDilation( baseName,basePath )
 %recordingsfolder = 'C:\Users\rudylabadmin\Desktop\layers\Recordings';
 %recordingsfolder = '/mnt/proraidDL/Database/WMProbeData';
 
+%%
+if nargin==0
+    [basePath,baseName] = fileparts(pwd);
+end
+%%
 
 addpath(fullfile(basePath,baseName));
 
@@ -15,9 +20,9 @@ abfname = fullfile(basePath,baseName,[baseName,'.abf']);
 analogName = fullfile(basePath,baseName,['analogin.dat']);
 
 savefile = fullfile(basePath,baseName,[baseName,'.pupildiameter.behavior.mat']);
-savevid = fullfile(basePath,baseName,DetectionFigures,[baseName,'.pupilvid.avi']);
+savevid = fullfile(basePath,baseName,'DetectionFigures',[baseName,'.pupilvid.avi']);
 
-SAVEVID = false;
+SAVEVID = true;
 savevidfr = 10;
 if SAVEVID
     pupdiamVid = VideoWriter(savevid);
@@ -38,7 +43,7 @@ puparea = nan(NumberOfFrames,1);
 pupcoords = nan(NumberOfFrames,2);
 
 %Loop through the frames and get pupil location/area
- figure
+pupfig = figure;
  colormap('gray')
 for ff = 1:NumberOfFrames 
 %ff = 1;
@@ -105,8 +110,10 @@ end
         %%
         %Pupil must be darker than this intensity: 2.5std above mean pupil
         intensitythresh = mean(double(pupilpixels)./255)+2.*std(double(pupilpixels)./255); 
-    end
         
+        set(pupfig,'visible','off')   
+    end
+     
     %Get the pupil - all pixels below intensity threshold (black)
     pupil=~im2bw(vidframe,intensitythresh);
 
@@ -175,13 +182,17 @@ end
 %Close the video object
 if SAVEVID; close(pupdiamVid); end
 
-%0-1 Normalize
+%0-1 Normalize, smooth the pupil area trace 
+%(make window in units of seconds or figure out the best # frames)
+smoothwin = 10;  %frames
 puparea_pxl = puparea;
+puparea = smooth(puparea,smoothwin);
 puparea = (puparea-min(puparea))./(max(puparea)-min(puparea));
 
 %% Load the analogin for the timestamps
 
 timepulses = readmulti(analogName,1);
+%LoadBinary('uint16')
 
 sf_pulse = 1./20000; %Sampling Frequency of the .abf file
 t_pulse = [1:length(timepulses)]'.*sf_pulse;
