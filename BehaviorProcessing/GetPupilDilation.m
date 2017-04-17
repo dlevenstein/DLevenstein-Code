@@ -90,12 +90,14 @@ end
     if ff==1
         
             %Show the Masked frame
-            subplot(2,2,2)
+            subplot(2,2,3)
          imagesc(vidframe)
         title('Trace the Pupil')
         
         h = imfreehand;
         pupilmask = createMask(h);
+        
+        %Get the pixel values for pupil, eye, and not-pupil eye
         pupilpixels = double(vidframe(pupilmask))./255; 
         irispixels  = double(vidframe(~mask & ~ pupilmask))./255; 
         eyepixels = double(vidframe(~mask))./255; 
@@ -110,25 +112,36 @@ end
         %Pupil must be darker than this intensity: 2.5std above mean pupil
         intensitythresh = mean(pupilpixels)+1.*std(pupilpixels); 
         %%
+        x = 1;
+        while ~isempty(x)
+        tentativepupil=2.*~im2bw(vidframe,intensitythresh);
+        tentativenotpupil=im2bw(vidframe,intensitythresh);
         
+        tentativemap = ~mask+tentativepupil+tentativenotpupil;
+        subplot(2,2,3)
+        imagesc(tentativemap)
         
-        subplot(2,2,4)
+        subplot(2,2,2)
         bar(intensitybins,eyehist)
         hold on
         plot(intensitybins,irishist,'g','linewidth',2)
         plot(intensitybins,pupilhist,'r','linewidth',2)
         plot([1 1].*intensitythresh,get(gca,'ylim'),'r--')
         xlim([0 1])
+        legend('Whole Eye','Not Pupil','Pupil','location','northwest')
         
        %Show eye with over/under pixels. allow user to select threshold and show new over/under 
-       %Use ROC? curve to get best threshold initially
-        
+       title({'Click to adjust threshold', 'or press RETURN for current threshold'})
+        [x,~] = ginput(1);
+        hold off
+        if isempty(x); break; end
+        intensitythresh = x; 
+        end
           %%
-        
-        
+
     
 
-        
+        %%
         set(pupfig,'visible','off')   
     end
      
