@@ -17,7 +17,7 @@ end
 
 addpath(fullfile(basePath,baseName));
 
-vidName = fullfile(basePath,baseName,[baseName,'.m4v']);
+vidName = fullfile(basePath,baseName,[baseName,'.avi']);
 abfname = fullfile(basePath,baseName,[baseName,'.abf']);
 analogName = fullfile(basePath,baseName,['analogin.dat']);
 
@@ -292,7 +292,10 @@ pupildilation.t_interp = t_interp;
 pupildilation.puparea = puparea;
 pupildilation.puparea_pxl = puparea_pxl;
 pupildilation.pupcoords = pupcoords;
-pupildilation.mask = mask;
+pupildilation.detectorname = 'GetPupilDilation';
+pupildilation.detectiondate = today('datetime');
+pupildilation.detectorparms.mask = mask;
+pupildilation.detectorparms.intensitythresh = intensitythresh;
 
 
 save(savefile,'pupildilation')
