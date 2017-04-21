@@ -1,4 +1,4 @@
-function [ output_args ] = RunAnalysis(analysisfunction,lookatfolder)
+function [  ] = RunAnalysis(analysisfunction,lookatfolder)
 %RunAnalysis(analysisfunction,datasetfolder) is a high level function that
 %takes as its input an analysis function and returns the result of the
 %analysis on multiple recordings
@@ -61,6 +61,9 @@ switch selectionmode
     [s,v] = listdlg('PromptString','Which recording(s) would you like analyze?',...
                     'ListString',possiblerecordingnames);
     recordingname = possiblerecordingnames(s);
+    [temp{1:length(s)}] = deal(datasetfolder);
+    datasetfolder = temp; 
+    clear temp
     
 end
 
