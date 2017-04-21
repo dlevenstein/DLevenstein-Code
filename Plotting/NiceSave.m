@@ -16,7 +16,7 @@ end
 set(gcf,'PaperOrientation','landscape');
 set(gcf,'PaperUnits','normalized');
 set(gcf,'PaperPosition',[0 0 1 1]);
-saveas(gcf,[figfolder,'/',recname,'.',figname,'.',figtype],figtype) ;
+saveas(gcf,[figfolder,'/',recname,'_',figname,'.',figtype],figtype) ;
 
 end
 
