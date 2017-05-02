@@ -1,5 +1,10 @@
 function [ cluass ] = GradDescCluster( cohmat )
 %SpatialGradDescCluster()
+% 
+%From Berenyi, A., Somogyvari, Z., Nagy, A. J., Roux, L., Long, J. D., 
+%   Fujisawa, S., et al. (2014). Large-scale, high-density (up to 512 
+%   channels) recording of local circuits in behaving animals. Journal of 
+%   Neurophysiology, 111(5), 1132?1149. http://doi.org/10.1152/jn.00785.2013
 %
 %INPUT
 %   
