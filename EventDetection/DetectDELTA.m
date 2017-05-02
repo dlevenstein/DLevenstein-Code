@@ -15,9 +15,10 @@ function [ deltapeaks,peakheights ] = DetectDELTA( LFP,sf,t_LFP,NREMints )
 %%
 %t_LFP = (1:length(LFP))./sf;
 
-deltarange = [1 4];
-%deltarange = [1 4];
-deltaLFP = FiltNPhase(LFP,deltarange,sf);
+deltarange = [0.5 4];
+%deltarange = [1 4];  TRY [0.5 6].... looks very good by eye
+numcyc = 3;
+deltaLFP = FiltNPhase(LFP,deltarange,sf,numcyc);
 deltaLFP = NormToInt(deltaLFP,NREMints,sf,'modZ');
 % gammarange = [75 120];
 % [~,gammapower] = FiltNPhase(LFP,gammarange,sf);
