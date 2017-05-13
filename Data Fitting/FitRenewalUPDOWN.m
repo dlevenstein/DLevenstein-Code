@@ -7,10 +7,18 @@ if ~exist('SHOWFIG','var')
 end
 
 
-initalparms = [0 0.5 min(dwelltimes)];
-lowerbound = [0 0 0];
-upperbound = [1 1 (max(dwelltimes))];
-opts = statset('MaxIter',50000, 'MaxFunEvals',100000,'FunValCheck','off');
+%THREE PARM - p0,pinf,tau
+% initalparms = [0 0.5 min(dwelltimes)];
+% lowerbound = [0 0 0];
+% upperbound = [1 1 (max(dwelltimes))];
+
+%TWO PARM - pinf,tau
+initalparms = [0.01 min(dwelltimes)];
+lowerbound = [1e-6 1e-6];
+upperbound = [1 10*(max(dwelltimes))];
+
+
+opts = statset('MaxIter',1e6, 'MaxFunEvals',1e8,'FunValCheck','off');
 
 [parmsHat,parmsCI] = mle(dwelltimes,'pdf',@RenewalFunction,...
     'options',opts,...%'optimfun','fmincon',...
@@ -20,7 +28,7 @@ opts = statset('MaxIter',50000, 'MaxFunEvals',100000,'FunValCheck','off');
 %acov = mlecov(parmsHat,dwelltimes,'pdf',@RenewalFunction);
 %stderr = sqrt(acov);
 
-nloglik = -sum(log(RenewalFunction(dwelltimes,parmsHat(1),parmsHat(2),parmsHat(3))));
+nloglik = -sum(log(RenewalFunction(dwelltimes,parmsHat(1),parmsHat(2))));
 
 %%
 if SHOWFIG
@@ -30,14 +38,24 @@ if SHOWFIG
     dx = diff(histbins([1 2]));
     bar(histbins,dwellhist./(sum(dwellhist).*dx),'k')
     hold on
-    plot(x,RenewalFunction(x,parmsHat(1),parmsHat(2),parmsHat(3)))
+    plot(x,RenewalFunction(x,parmsHat(1),parmsHat(2)))
 end
 
 end
 
-function pdf = RenewalFunction(data,p0,pinf,tau)
-    p = (p0-pinf).*exp(-data./tau)+pinf;
-    S = exp(-(p0-pinf).*tau.*(1-exp(-data./tau))-pinf.*data);
-    
+function pdf = RenewalFunction(data,pinf,tau)
+%THREE PARM - p0,pinf,tau
+%     p = (p0-pinf).*exp(-data./tau)+pinf;
+%     S = exp(-(p0-pinf).*tau.*(1-exp(-data./tau))-pinf.*data);
+
+%TWO PARM - pinf,tau
+%    p = (0-pinf).*exp(-data./tau)+pinf;
+%    S = exp(-(0-pinf).*tau.*(1-exp(-data./tau))-pinf.*data);
+        
+%TWO PARM - sigmoid
+    p = pinf.*(data.^2)./(tau.^2+data.^2);
+    S = exp(-pinf.*(data-tau.*atan(data./tau)));
+
+
     pdf = S.*p;
 end

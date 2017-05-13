@@ -33,13 +33,13 @@ inweight = sum(Wij,2)./N;
 [~,sortindegree] = sort(indegree);
 
 %%
-numbins = 25;
-weightbins = linspace(-1,log10(maxw),numbins);
-weightdist = hist(log10(Wij)',weightbins);
-
-figure
-imagesc(weightdist(:,sortindegree))
-axis xy
+% numbins = 25;
+% weightbins = linspace(-1,log10(maxw),numbins);
+% weightdist = hist(log10(Wij)',weightbins);
+% 
+% figure
+% imagesc(weightdist(:,sortindegree))
+% axis xy
 
 
 %%
