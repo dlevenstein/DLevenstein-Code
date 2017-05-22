@@ -58,6 +58,8 @@ switch normtype
         normdata = interp1(sortdata,percentiles,data,'nearest');
     case 'modZ'
         normdata = 0.6745*(data-repmat(intmedian,length(data(:,1)),1))./repmat(intMAD,length(data(:,1)),1);
+        intmean = intmedian;
+        intstd = intMAD;
     otherwise
         display('normtype should be ''Z'' or ''mean''')
 end
