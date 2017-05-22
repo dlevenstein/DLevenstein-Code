@@ -25,6 +25,8 @@ function [thresh,cross,bihist] = BimodalThresh(bimodaldata,varargin)
 %
 %DLevenstein Spring 2016
 %-Updated Spring 2017 to include Schmidt trigger, maxthresh
+%-TO DO: add hartigans dip test to determine if bimodal... also to find the
+%best threshold?  Or ISO-CUT from Simons foundation?
 %%
 %Optional input defaults
 maxthresh = inf;
