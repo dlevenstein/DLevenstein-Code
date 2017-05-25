@@ -1,15 +1,19 @@
-function [normdata,intmean,intstd] = NormToInt(data,int,sf,normtype,varargin)
-%NormToInt(data,int,sf) normalizes the data to the mean and standard
-%deviation of the data in intervals int
+function [normdata,intmean,intstd] = NormToInt(data,normtype,int,sf,varargin)
+%NormToInt(data,normtype, int,sf) normalizes the data to a subset of time 
+%(int). Has options for multiple normalization types.
 %
 %INPUTS
-%   data    [Nt x Ndim]  
-%   int     [Nints x 2] reference interval onsets and offset times within  
-%           which to Z score the data to (optional)
-%   sf      (optional) sampling frequency of the data. default 1
+%   data    [Nt x Ndim] 
 %   normtype 'mean', 'Z', 'max', 'percentile', 'modZ' for modified Z-score
+%   int     [Nints x 2] reference interval onsets and offset times   
+%           to normalize the data with respect to (optional)
+%   sf      (optional) sampling frequency of the data. default 1
+%
+%Note: modified Z score is median-based and robust to outliers
+%see https://ibm.co/2qi4Vy5
 %
 %DLevenstein Summer 2016
+%TO DO: Improve input parsing
 %%
 SHOWFIG = false;
 
@@ -53,7 +57,7 @@ switch normtype
         colmax = max(int_data,[],1);
         normdata = bsxfun(@(X,Y) X./Y,data,colmax);
     case 'percentile'
-        sortdata = unique(sort(int_data));
+        sortdata = unique(sort(int_data(~isnan(int_data))));
         percentiles = linspace(0,1,length(sortdata));
         normdata = interp1(sortdata,percentiles,data,'nearest');
     case 'modZ'
