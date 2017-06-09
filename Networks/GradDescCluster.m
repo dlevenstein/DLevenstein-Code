@@ -1,22 +1,34 @@
-function [ cluass ] = GradDescCluster( cohmat )
-%SpatialGradDescCluster()
+function [ cluass ] = GradDescCluster( cohmat, varargin )
+%[cluass] = GradDescCluster(cohmat) clusters recording sites given a pairwise 
+%similarity matrix using gradient descent to find minimize within-cluster 
+%interaction energy. (i.e. maximize within-cluster coherence, see Berenyi 
+%et al 2014 for details). Should be repeated a few times to confirm.
 % 
-%From Berenyi, A., Somogyvari, Z., Nagy, A. J., Roux, L., Long, J. D., 
-%   Fujisawa, S., et al. (2014). Large-scale, high-density (up to 512 
+%INPUT
+%   cohmat      undirected pairwise connectivity matrix (coherence or other)
+%   (optional parameters)
+%   'numsteps'  number of steps (default: 5e5)
+%   'numinit'   number of initial clusters, should be larger than the 
+%               number of clusters you expect (default: 20)
+%
+%OUTPUT
+%   cluass      cluster assignments for each 
+%
+%From Berenyi et al. (2014). Large-scale, high-density (up to 512 
 %   channels) recording of local circuits in behaving animals. Journal of 
 %   Neurophysiology, 111(5), 1132?1149. http://doi.org/10.1152/jn.00785.2013
 %
-%INPUT
-%   
-%
-%% DEV
-%load('/Users/dlevenstein/Dropbox/Research/Buzsaki Lab/AmygdalaHPC/LFPSiteMapAnalysis/gacohState.mat')
-%cohmat = corrmat.sws;
-%% Parms and defaults
-numsteps = 500000;
+%Code implementation by DLevenstein 2016
+%TO DO
+%-Automated removal of small/scattered clusters if desired?
+%% Parse the input parameters
+parms = inputParser;
+addParameter(parms,'numsteps',500000,@isnumeric);
+addParameter(parms,'numinit',20,@isnumeric);
 
-numinit = 20; %number of initial random clusters
-
+parse(parms,varargin{:})
+numsteps = parms.Results.numsteps;
+numinit = parms.Results.numinit;
 
 %% Initiate and Run
 numsites = size(cohmat,1);
