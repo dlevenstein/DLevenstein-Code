@@ -4,7 +4,7 @@
 %
 %    [ccg,t] = CCG(times,groups,<options>)
 %
-%    times          times of all events (sorted)
+%    times          times of all events
 %                   (alternate) - can be {Ncells} array of [Nspikes] 
 %                   spiketimes for each cell
 %    groups         group IDs for each event in time list
@@ -43,10 +43,11 @@ if iscell(times) && isempty(groups)
         groups{cc}=cc.*ones(size(times{cc}));
     end
     times = cat(1,times{:}); groups = cat(1,groups{:});
-    [times,sortidx] = sort(times);
-    groups = groups(sortidx);
 end
 
+% Sort the spike times DL2017
+[times,sortidx] = sort(times);
+groups = groups(sortidx);
 
 % Check parameters
 if nargin < 2,
