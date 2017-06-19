@@ -3,8 +3,8 @@ function [corrbin,bincenters] = PairMatHist(paircorrs,pairvalues,numbins,binrang
 %   Detailed explanation goes here
 %
 %INPUT
-%   paircorrs
-%   pairvalues
+%   paircorrs   [Npairs]
+%   pairvalues  [Npairs x 2]
 %   numbins     (or binedges)
 %   binrange    (optional)
 %
