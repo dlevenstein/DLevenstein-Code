@@ -12,7 +12,7 @@ function [ structout ] = CollapseStruct( structin,dim,combine,NEST )
 %               structure array. (default: 2)
 %   (optional)
 %       combine     can take 'mean' or 'median' instead of concatenating
-%                   or 'std'
+%                   or 'std'. default: 'justcat'
 %
 %       
 %% A place for input options
