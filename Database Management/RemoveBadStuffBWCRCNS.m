@@ -13,7 +13,10 @@ badshanks = setdiff(1:totalnumberofshanks,bmd.goodshanks);
 for bidx = 1:length(badshanks)
     tshank = badshanks(bidx);
     cluname = fullfile(basepath,[basename '.clu.' num2str(tshank)]);
-    
+    if ~exist(cluname,'file')
+        display('Cluster already deleted')
+        continue
+    end
     clu = load(cluname);
     clu = zeros(size(clu));%blank out all to noise cluster
     clu(1) = 1;%add denotation that there is 1 cluster here (first entry to .clu is 1 now)
@@ -31,7 +34,11 @@ end
 load(fullfile(basepath,[basename '_SStable.mat']),'badcells')
 load(fullfile(basepath,[basename '_SAll.mat']),'shank','cellIx')
 
-shankstoload = unique(shank(badcells.allbadcells));
+if isempty(badcells)
+    shankstoload = [];
+else
+    shankstoload = unique(shank(badcells.allbadcells));
+end
 
 for sidx = 1:length(shankstoload)
     tshank = shankstoload(sidx);

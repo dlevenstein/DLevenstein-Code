@@ -4,7 +4,8 @@ function [ UPDOWNstates ] = DetectLFPeakDOWN( basePath,varargin)
 %and period of neuronal inactivity (DOWN/OFF state).
 %
 %INPUTS
-%   basePath    
+%   basePath  
+%   (input options not yet implemented... all set to default)
 %   'NREMInts'  -Interval of times for NREM 
 %               -(Default: loaded from SleepState.states.mat)
 %   'SWChann'   -Channel with the most robust (positively deflecting) Slow
@@ -45,13 +46,13 @@ CTXSpikeGroups = 'all';
 SWChann = [];
 NREMInts = [];
 SAVEMAT = true;
-FORCERELOAD = false;
+FORCEREDETECT = false; %Change back to false...
 SHOWFIG = true;
 
 %Parms
 minOFF = 0.025; %ms
 mininterOFF = 0.03; %ms
-peakthresh = 2.5; %for modZ
+peakthresh = 2.3; %for modZ (sable/OK at 2.5...)
 lowerpeakthresh = 1; %for modZ
 peakdist = 0.05;
 
@@ -62,8 +63,8 @@ baseName = bz_BasenameFromBasepath(basePath);
 figfolder = fullfile(basePath,'DetectionFigures');
 savefile = fullfile(basePath,[baseName,'.UPDOWNstates.states.mat']);
 
-if exist(savefile,'file') && ~FORCERELOAD
-    display(['Slow Oscillation alter Detected, loading ',baseName,'.UPDOWNstates.states.mat'])
+if exist(savefile,'file') && ~FORCEREDETECT
+    display(['Slow Oscillation already Detected, loading ',baseName,'.UPDOWNstates.states.mat'])
     UPDOWNstates = bz_LoadStates(basePath,'UPDOWNstates');
     return
 end
@@ -101,7 +102,9 @@ end
 lfp = bz_GetLFP(SWChann,'basepath',basePath);
 
 %Spikes in the CTX Spike Groups
-spikes = bz_GetSpikes('basepath',basePath,'spikeGroups',CTXSpikeGroups);
+spikes = bz_GetSpikes('basepath',basePath,'region','CTX');
+%assumes region 'CTX'.... update this maybe putting in local region 
+%spikegroups is the better way to go
 
 
 %% Filter the LFP
@@ -133,8 +136,8 @@ putSWPeakHeights = LFPeakheight(LFPeakheight>=peakthresh);
 %% Calculate Binned Population Rate
 display('Binning Spikes')
 dt = 0.005; %dt = 5ms
-overlap = 6; %Overlap = 6 dt
-winsize = dt*overlap; %meaning windows are 30ms big
+overlap = 8; %Overlap = 8 dt
+winsize = dt*overlap; %meaning windows are 40ms big (previously 30)
 [spikemat,t_spkmat,spindices] = SpktToSpkmat(spikes.times, [], dt,overlap);
 synchmat = sum(spikemat>0,2);
 ratemat = sum(spikemat,2);
@@ -221,6 +224,7 @@ CCGvec = [DOWNpeaks,ones(size(DOWNpeaks));...
 %%
 winsize = 10; %s
 samplewin = randsample(LFPeaks,1)+winsize.*[-0.5 0.5];
+sampleIDX = lfp.timestamps>=samplewin(1) & lfp.timestamps<=samplewin(2);
 
 ratecolor = makeColorMap([1 1 1],[0.8 0 0],[0 0 0]);
 figure
@@ -271,7 +275,8 @@ subplot(8,2,8)
    
     
 subplot(6,1,4)
-    plot(lfp.timestamps,lfp.data,'k')
+    plot(lfp.timestamps(sampleIDX),lfp.data(sampleIDX),'k')
+    axis tight
     hold on
     box off
     plot(lfp.timestamps(ismember(lfp.timestamps,LFPeaks)),lfp.data(ismember(lfp.timestamps,LFPeaks)),'r.')
@@ -326,6 +331,7 @@ detectionparms.minOFF = minOFF; %ms
 detectionparms.mininterOFF = mininterOFF; %ms
 detectionparms.peakthresh = peakthresh; %for modZ
 detectionparms.peakdist = peakdist;
+detectionparms.SWchannel = SWChann;
 
 
 UPDOWNstates.ints.UP = UPints;
