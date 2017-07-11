@@ -1,6 +1,5 @@
 function [ bifnlines ] = BifnFromXPP( filename )
-%UNTITLED3 Summary of this function goes here
-%   Detailed explanation goes here
+%[ bifnlines ] = BifnFromXPP( filename )
 %%
 
 Ibifn = importdata(filename);
