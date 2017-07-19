@@ -1,6 +1,10 @@
 function [ bifnlines ] = BifnFromXPP( filename )
 %[ bifnlines ] = BifnFromXPP( filename )
 %%
+if ~exist(filename,'file')
+    error('filename given does not exist!')
+end
+
 
 Ibifn = importdata(filename);
 
