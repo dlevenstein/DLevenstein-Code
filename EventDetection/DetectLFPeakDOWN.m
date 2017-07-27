@@ -1,7 +1,7 @@
-function [ SlowWave ] = DetectSlowWaves( basePath,varargin)
-%[UPDOWNstates] = DetectSlowWave(basePath) detects neocortical slow
+function [ UPDOWNstates ] = DetectLFPeakDOWN( basePath,varargin)
+%[UPDOWNstates] = DetectLFPeakDOWN(basePath) detects neocortical slow
 %waves using a combination of a positive deflection in the LFP (delta wave)
-%and a dip in gamma power.
+%and period of neuronal inactivity (DOWN/OFF state).
 %
 %INPUTS
 %   basePath  
@@ -46,7 +46,7 @@ CTXSpikeGroups = 'all';
 SWChann = [];
 NREMInts = [];
 SAVEMAT = true;
-FORCEREDETECT = true; %Change back to false...
+FORCEREDETECT = false; %Change back to false...
 SHOWFIG = true;
 
 %Parms
@@ -61,11 +61,11 @@ goodcellnumber = 20;
 %% File Management
 baseName = bz_BasenameFromBasepath(basePath);
 figfolder = fullfile(basePath,'DetectionFigures');
-savefile = fullfile(basePath,[baseName,'.SlowWave.states.mat']);
+savefile = fullfile(basePath,[baseName,'.UPDOWNstates.states.mat']);
 
 if exist(savefile,'file') && ~FORCEREDETECT
     display(['Slow Oscillation already Detected, loading ',baseName,'.UPDOWNstates.states.mat'])
-    SlowWave = bz_LoadStates(basePath,'UPDOWNstates');
+    UPDOWNstates = bz_LoadStates(basePath,'UPDOWNstates');
     return
 end
 
@@ -98,8 +98,6 @@ if ~isfield(SleepState.detectorparams,'SWchannum') && isempty(SWChann)
     SWChann = input('Which channel shows the most robust (positive polarity) slow waves?');
 elseif isempty(SWChann)
     SWChann = SleepState.detectorparams.SWchannum;
-elseif strcmp(SWChann,'select')
-    %run SW channel selection routine: subfunction below (ChanSelect)
 end
 lfp = bz_GetLFP(SWChann,'basepath',basePath);
 
@@ -108,109 +106,32 @@ spikes = bz_GetSpikes('basepath',basePath,'region','CTX');
 %assumes region 'CTX'.... update this maybe putting in local region 
 %spikegroups is the better way to go
 
+
+%% Filter the LFP
+display('Filtering LFP')
+filterbounds = [0.5 6]; %heuristically defined.  room for improvement here.
+deltaLFP = bz_Filter(lfp,'passband',filterbounds,'filter','fir1','order',1);
+
+%% Find peaks in the filtered LFP
+normLFP = NormToInt(deltaLFP.data,'modZ',NREMInts,deltaLFP.samplingRate);
+
+[peakheights,LFPeaks] = findpeaks(normLFP,deltaLFP.timestamps,'MinPeakHeight',lowerpeakthresh,'MinPeakDistance',peakdist);
+[LFPeaks,keepPeaks] = RestrictInts(LFPeaks,NREMInts);LFPeaks=LFPeaks(:,1);
+LFPeakheight = peakheights(keepPeaks);
+
 %% Check cell number and put all the spikes together
- numcells = length(spikes.times);
-% if numcells < goodcellnumber
-%     warning(['You only have ',num2str(numcells),' in this recording... >',...
-%         num2str(goodcellnumber),' are recommended for good SW detection'])
-% end
+numcells = length(spikes.times);
+if numcells < goodcellnumber
+    warning(['You only have ',num2str(numcells),' in this recording... >',...
+        num2str(goodcellnumber),' are recommended for good SW detection'])
+end
 allspikes = sort(cat(1,spikes.times{:}));
 
-%% Filter the LFP: delta
-display('Filtering LFP')
-deltafilterbounds = [0.5 6]; %heuristically defined.  room for improvement here.
-deltaLFP = bz_Filter(lfp,'passband',deltafilterbounds,'filter','fir1','order',1);
 
-%% Find peaks in the delta LFP
-normDELTA = NormToInt(deltaLFP.data,'modZ',NREMInts,deltaLFP.samplingRate);
+%% Peak threshold for putative SWs
 
-% [peakheights,DELTApeaks] = findpeaks(normDELTA,deltaLFP.timestamps,'MinPeakHeight',lowerpeakthresh,'MinPeakDistance',peakdist);
-% [DELTApeaks,keepPeaks] = RestrictInts(DELTApeaks,NREMInts);DELTApeaks=DELTApeaks(:,1);
-% DELTAPeakheight = peakheights(keepPeaks);
-
-DELTApeakthresh = 2.2;
-DELTAwinthresh = 1;
-minwindur = 0.04;
-joinwindur = 0.005;
-
-[DELTApeaks,DELTAwins,DELTApeakheight] = FindPeakInWin(normDELTA,deltaLFP.timestamps,DELTApeakthresh,DELTAwinthresh,minwindur,joinwindur);
-[DELTApeaks,keepPeaks] = RestrictInts(DELTApeaks,NREMInts);
-DELTApeakheight = DELTApeakheight(keepPeaks);  DELTAwins = DELTAwins(keepPeaks,:);
-
-%Peak threshold for putative SWs
-% putSWs = DELTApeaks(DELTAPeakheight>=peakthresh);
-% putSWPeakHeights = DELTAPeakheight(DELTAPeakheight>=peakthresh);
-
-%% Filter and get power of the LFP: gamma
-gammafilter = [100 inf]; %high pass >80Hz (previously (>100Hz)
-gammasmoothwin = 0.075; %window for smoothing gamma power 
-gammaLFP = bz_Filter(lfp,'passband',gammafilter,'filter','fir1','order',4);
-gammaLFP.smoothamp = smooth(gammaLFP.amp,round(gammasmoothwin.*gammaLFP.samplingRate),'moving' );
-
-%% Find dips in the gamma power
-gammathresh = 1.3;
-gammawinthresh = 1;
-normGAMMA = NormToInt(gammaLFP.smoothamp,'modZ',NREMInts,gammaLFP.samplingRate);
-
-[GAMMAdips,GAMMAwins,GAMMAdipdepth] = FindPeakInWin(-normGAMMA,gammaLFP.timestamps,gammathresh,gammawinthresh,minwindur,joinwindur);
-[GAMMAdips,keepPeaks] = RestrictInts(GAMMAdips,NREMInts);
-GAMMAdipdepth = GAMMAdipdepth(keepPeaks);  GAMMAwins = GAMMAwins(keepPeaks,:);
-%
-%use width in findpeaks to get window below threshold? same for delta?
-
-%% Merge gamma/delta windows
-[ DOWNints,mergedidx ] = MergeSeparatedInts( [DELTAwins;GAMMAwins]);
-%Keep only those windows in which DELTA/GAMMA were merged togehter (note
-%this only works if joining happened previously... otherwise could keep
-%windows where two delta and/or two gamma were joined;
-numwins = cellfun(@length,mergedidx);
-DOWNints = DOWNints(numwins>=2,:);
-%Get the SW peak magnitude
-mergedidx = mergedidx(numwins>=2); %keep only the indices from those that were merged into SWs
-mergeddeltaidx = cellfun(@(X) X(X<=length(DELTAwins)),mergedidx,'UniformOutput',false); %keep delta
-[SWpeakmag,peakidx] = cellfun(@(X) max(DELTApeakheight(X)),mergeddeltaidx,'UniformOutput',false); %Pick the larger of the peaks in each SW
-SWpeaks = cellfun(@(X,Y) DELTApeaks(X(Y)),mergeddeltaidx,peakidx);
-SWpeakmag = [SWpeakmag{:}]';
-
-%% UP and DOWN
-
-DOWNdur = diff(DOWNints,[],2);
-
-%DL: duration threshold already accounted for
-% %Remove DOWNs that are shorter than the threshold
-% removepeaks = DOWNdur<minOFF;
-% DOWNints(removepeaks,:) = [];DOWNdur(removepeaks) = [];
-% DOWNpeaks(removepeaks) = []; DOWNpeakmag(removepeaks) = [];
-
-%Calculate UPs and remove those that aren't in detectionints
-UPints = [DOWNints(1:end-1,2) DOWNints(2:end,1)];
-UPints = RestrictInts(UPints,NREMInts);
-
-UPdur = diff(UPints,[],2);
-%%
-winsize = 7; %s
-samplewin = randsample(DELTApeaks,1)+winsize.*[-0.5 0.5];
-sampleIDX = lfp.timestamps>=samplewin(1) & lfp.timestamps<=samplewin(2);
-
-figure
-subplot(2,1,1)
-plot(deltaLFP.timestamps(sampleIDX),normGAMMA(sampleIDX),'g')
-hold on
-plot(deltaLFP.timestamps(sampleIDX),normDELTA(sampleIDX),'r')
-plot(GAMMAdips,-GAMMAdipdepth,'go')
-plot(DELTApeaks,DELTApeakheight,'ro')
-plot(SWpeaks,SWpeakmag,'ko')
-plot(GAMMAwins',-gammawinthresh.*ones(size(GAMMAwins')),'g')
-plot(DELTAwins',DELTAwinthresh.*ones(size(DELTAwins')),'r')
-xlim(samplewin)
-subplot(2,1,2)
-plot(lfp.timestamps(sampleIDX),lfp.data(sampleIDX),'k')
-hold on
-plot(DOWNints',zeros(size(DOWNints')),'k')
-xlim(samplewin)
-%plot(normGAMMA,normDELTA,'k.')
-xlabel('Gamma Power');ylabel('Delta LFP')
-
+putSWs = LFPeaks(LFPeakheight>=peakthresh);
+putSWPeakHeights = LFPeakheight(LFPeakheight>=peakthresh);
 
 %% Calculate Binned Population Rate
 display('Binning Spikes')
@@ -221,70 +142,70 @@ winsize = dt*overlap; %meaning windows are 40ms big (previously 30)
 synchmat = sum(spikemat>0,2);
 ratemat = sum(spikemat,2);
 
-%NREM spike rate histogram
+%% NREM spike rate histogram
+
 [tspike_NREM,tidx_NREM] = RestrictInts(t_spkmat,NREMInts);
 tspike_NREM = tspike_NREM(:,1);
 synchmat_NREM = synchmat(tidx_NREM);
 ratemat_NREM = ratemat(tidx_NREM);
 
-%% Find OFF states as spiking (old)
-% minoffspikes = 1;
-% OFFidx = synchmat<=minoffspikes;
-% OFFints = IDXtoINT(OFFidx);
-% OFFints = t_spkmat(OFFints{1});
-% OFFints = RestrictInts(OFFints,NREMInts);
-% 
-% 
-% %% Find DOWN states: Delta peaks in OFF ints
-% %maxinterdown = 15;
-% minDOWNdur = 0.03;
-% OFFints(OFFints(:,2)-OFFints(:,1)<minDOWNdur,:) = [];
-% [~,keepdelta,keepOFF] = RestrictInts(putSWs,OFFints);
-% DOWNints = OFFints(keepOFF,:);
-% DOWNpeaks = putSWs(keepdelta);
-% 
-% 
-% DOWNpeakmag = putSWPeakHeights(keepdelta);
-% DOWNdur = diff(DOWNints,[],2);
-% 
-% %Remove DOWNs that are shorter than the threshold
-% removepeaks = DOWNdur<minOFF;
-% DOWNints(removepeaks,:) = [];DOWNdur(removepeaks) = [];
-% DOWNpeaks(removepeaks) = []; DOWNpeakmag(removepeaks) = [];
-% 
-% %Calculate UPs and remove those that aren't in detectionints
-% UPints = [DOWNints(1:end-1,2) DOWNints(2:end,1)];
-% UPints = RestrictInts(UPints,NREMInts);
-% 
-% UPdur = diff(UPints,[],2);
+%% Find OFF states
+
+minoffspikes = 1;
+OFFidx = synchmat<=minoffspikes;
+OFFints = IDXtoINT(OFFidx);
+OFFints = t_spkmat(OFFints{1});
+OFFints = RestrictInts(OFFints,NREMInts);
+
+
+%% Find DOWN states: Delta peaks in OFF ints
+%maxinterdown = 15;
+minDOWNdur = 0.03;
+OFFints(OFFints(:,2)-OFFints(:,1)<minDOWNdur,:) = [];
+[~,keepdelta,keepOFF] = RestrictInts(putSWs,OFFints);
+DOWNints = OFFints(keepOFF,:);
+DOWNpeaks = putSWs(keepdelta);
+
+
+DOWNpeakmag = putSWPeakHeights(keepdelta);
+DOWNdur = diff(DOWNints,[],2);
+
+%Remove DOWNs that are shorter than the threshold
+removepeaks = DOWNdur<minOFF;
+DOWNints(removepeaks,:) = [];DOWNdur(removepeaks) = [];
+DOWNpeaks(removepeaks) = []; DOWNpeakmag(removepeaks) = [];
+
+%Calculate UPs and remove those that aren't in detectionints
+UPints = [DOWNints(1:end-1,2) DOWNints(2:end,1)];
+UPints = RestrictInts(UPints,NREMInts);
+
+UPdur = diff(UPints,[],2);
 
 
 
 %%    
 if SHOWFIG  
 %% For Figure
+display('Calculating PETH by Peak for Figure')
+win = 1;
+reltime = [];
+spkpeakheight = [];
+for pp = 1:length(LFPeaks)
+    nearpeakspikes = allspikes >= LFPeaks(pp)-win & allspikes <= LFPeaks(pp)+win;
+    reltime = [reltime; allspikes(nearpeakspikes)-LFPeaks(pp)];
+    spkpeakheight = [spkpeakheight; LFPeakheight(pp).*ones(sum(nearpeakspikes),1)];
+   % keyboard
+end
 
 %% Spike-SW CCG histogram by peak height
-% display('Calculating PETH by Peak for Figure')
-% win = 1;
-% reltime = [];
-% spkpeakheight = [];
-% for pp = 1:length(DELTApeaks)
-%     nearpeakspikes = allspikes >= DELTApeaks(pp)-win & allspikes <= DELTApeaks(pp)+win;
-%     reltime = [reltime; allspikes(nearpeakspikes)-DELTApeaks(pp)];
-%     spkpeakheight = [spkpeakheight; DELTAPeakheight(pp).*ones(sum(nearpeakspikes),1)];
-%    % keyboard
-% end
-% 
-% 
-% numtimebins = 200;
-% nummagbins = 30;
-% timebins = linspace(-win,win,numtimebins);
-% magbins = linspace(1,8, nummagbins);
-% peakmagdist = hist(DELTAPeakheight,magbins);
-% 
-% spikehitmat = hist3([reltime,spkpeakheight],{timebins,magbins});
-% ratemat_bypeakmag = bsxfun(@(A,B) A./B./mean(diff(timebins))./numcells,spikehitmat,peakmagdist);
+numtimebins = 200;
+nummagbins = 30;
+timebins = linspace(-win,win,numtimebins);
+magbins = linspace(1,8, nummagbins);
+peakmagdist = hist(LFPeakheight,magbins);
+
+spikehitmat = hist3([reltime,spkpeakheight],{timebins,magbins});
+ratemat_bypeakmag = bsxfun(@(A,B) A./B./mean(diff(timebins))./numcells,spikehitmat,peakmagdist);
 
     
 %% CCG of SLow Waves
@@ -292,33 +213,44 @@ if SHOWFIG
 %     DOWNints(:,1),2.*ones(size(DOWNints(:,1)));...
 %     DOWNints(:,2),3.*ones(size(DOWNints(:,2)))];
 %With other slow waves
-[SW_CCG,t_CCG] = CCG(SWpeaks,ones(size(SWpeaks)),'binSize',0.02);
+[SW_CCG,t_CCG] = CCG(DOWNpeaks,ones(size(DOWNpeaks)),'binSize',0.02);
 
 %With Spikes
-CCGvec = [SWpeaks,ones(size(SWpeaks));...
+CCGvec = [DOWNpeaks,ones(size(DOWNpeaks));...
     allspikes,2.*ones(size(allspikes))];
 [SWspike_CCG,t_CCG] = CCG(CCGvec(:,1),CCGvec(:,2),'binSize',0.02);
 %SWspike_CCG = SWspike_CCG(:,1,2);
 
 %%
 winsize = 10; %s
-samplewin = randsample(SWpeaks,1)+winsize.*[-0.5 0.5];
+samplewin = randsample(LFPeaks,1)+winsize.*[-0.5 0.5];
 sampleIDX = lfp.timestamps>=samplewin(1) & lfp.timestamps<=samplewin(2);
 
 ratecolor = makeColorMap([1 1 1],[0.8 0 0],[0 0 0]);
 figure
 
-%Add back soon
-% subplot(4,2,3)
-%     imagesc(timebins,magbins,ratemat_bypeakmag')
-%     hold on
-%     plot(get(gca,'xlim'),peakthresh.*[1 1],'k--')
-%     plot([0 0],get(gca,'ylim'),'k-')
-%     colormap(ratecolor)
-%     colorbar('location','east')
-%     xlim([-0.8 0.8])
-%     axis xy
-%     xlabel('t (relative to SW peak)');ylabel({'SW Peak Amplitude', '(modZ)'})
+subplot(8,2,2)
+    hist(ratemat_NREM,0:numcells)
+    hold on
+    plot([0 0],get(gca,'ylim'),'k-')
+    xlim([0 20])
+subplot(8,2,4)
+    hist(synchmat_NREM,0:numcells)
+    hold on
+    plot([0 0],get(gca,'ylim'),'k-')
+    xlim([0 20])
+
+    
+subplot(4,2,3)
+    imagesc(timebins,magbins,ratemat_bypeakmag')
+    hold on
+    plot(get(gca,'xlim'),peakthresh.*[1 1],'k--')
+    plot([0 0],get(gca,'ylim'),'k-')
+    colormap(ratecolor)
+    colorbar('location','east')
+    xlim([-0.8 0.8])
+    axis xy
+    xlabel('t (relative to delta peak)');ylabel({'Delta Peak Amplitude', '(modZ)'})
     
 subplot(8,2,1)
     bar(t_CCG,SW_CCG,'facecolor','g','FaceAlpha',0.2)
@@ -329,7 +261,7 @@ subplot(8,2,1)
     ylabel('Delta Peaks')
     
 subplot(8,2,3)
-    bar(t_CCG,SWspike_CCG(:,1,2)./length(SWpeaks),'facecolor',[0.5 0.5 0.5])
+    bar(t_CCG,SWspike_CCG(:,1,2)./length(DOWNpeaks),'facecolor',[0.5 0.5 0.5])
     xlim([-0.8 0.8])
     set(gca,'xticklabel',[]);
     ylabel('Spike Rate');
@@ -347,14 +279,14 @@ subplot(6,1,4)
     axis tight
     hold on
     box off
-    plot(lfp.timestamps(ismember(lfp.timestamps,SWpeaks)),lfp.data(ismember(lfp.timestamps,SWpeaks)),'r.')
-    plot(lfp.timestamps(ismember(lfp.timestamps,SWpeaks)),lfp.data(ismember(lfp.timestamps,SWpeaks)),'g.')
+    plot(lfp.timestamps(ismember(lfp.timestamps,LFPeaks)),lfp.data(ismember(lfp.timestamps,LFPeaks)),'r.')
+    plot(lfp.timestamps(ismember(lfp.timestamps,DOWNpeaks)),lfp.data(ismember(lfp.timestamps,DOWNpeaks)),'g.')
     
         %OFF patches
-%         y = get(gca,'Ylim');
-%         patch([OFFints(:,1) OFFints(:,2) OFFints(:,2) OFFints(:,1)]',...
-%             repmat([y(1) y(1) y(2) y(2)],length(OFFints(:,1)),1)',...
-%             'r','FaceAlpha',0.1,'EdgeColor','none');
+        y = get(gca,'Ylim');
+        patch([OFFints(:,1) OFFints(:,2) OFFints(:,2) OFFints(:,1)]',...
+            repmat([y(1) y(1) y(2) y(2)],length(OFFints(:,1)),1)',...
+            'r','FaceAlpha',0.1,'EdgeColor','none');
     
         %DOWN patches
         y = get(gca,'Ylim');
@@ -371,19 +303,17 @@ subplot(3,1,3)
     hold on
     ylim([-8 length(unique(spikes.spindices(:,2)))+1])
         %OFF patches
-%         y = get(gca,'Ylim');
-%         patch([OFFints(:,1) OFFints(:,2) OFFints(:,2) OFFints(:,1)]',...
-%             repmat([y(1) y(1) y(2) y(2)],length(OFFints(:,1)),1)',...
-%             'r','FaceAlpha',0.1,'EdgeColor','none');    
+        y = get(gca,'Ylim');
+        patch([OFFints(:,1) OFFints(:,2) OFFints(:,2) OFFints(:,1)]',...
+            repmat([y(1) y(1) y(2) y(2)],length(OFFints(:,1)),1)',...
+            'r','FaceAlpha',0.1,'EdgeColor','none');    
         %DOWN patches
         patch([DOWNints(:,1) DOWNints(:,2) DOWNints(:,2) DOWNints(:,1)]',...
             repmat([y(1) y(1) y(2) y(2)],length(DOWNints(:,1)),1)',...
             'g','FaceAlpha',0.2,'EdgeColor','none');
      
         
-   % plot(deltaLFP.timestamps,normDELTA-peakthresh,'b','Linewidth',1)    
-    plot(deltaLFP.timestamps(sampleIDX),normGAMMA(sampleIDX)+gammawinthresh,'g','Linewidth',1) 
-    plot(deltaLFP.timestamps(sampleIDX),normDELTA(sampleIDX)-DELTAwinthresh,'b','Linewidth',1) 
+    plot(deltaLFP.timestamps,normLFP-peakthresh,'b','Linewidth',1)    
     plot(spikes.spindices(:,1),spikes.spindices(:,2),'k.','MarkerSize',4)
     box off    
     xlim(samplewin)
@@ -404,16 +334,16 @@ detectionparms.peakdist = peakdist;
 detectionparms.SWchannel = SWChann;
 
 
-SlowWave.ints.UP = UPints;
-SlowWave.ints.DOWN = DOWNints;
-SlowWave.SWpeaks = SWpeaks;
-SlowWave.SWpeakmag = SWpeakmag;
-SlowWave.detectorinfo.detectorname = 'DetectSlowWaves';
-SlowWave.detectorinfo.detectionparms = detectionparms;
-SlowWave.detectiondate = today('datetime');
+UPDOWNstates.ints.UP = UPints;
+UPDOWNstates.ints.DOWN = DOWNints;
+UPDOWNstates.DOWNpeaks = DOWNpeaks;
+UPDOWNstates.DOWNpeakmag = DOWNpeakmag;
+UPDOWNstates.detectorinfo.detectorname = 'DetectLFPeakDOWN';
+UPDOWNstates.detectorinfo.detectionparms = detectionparms;
+UPDOWNstates.detectiondate = today('datetime');
 
 if SAVEMAT
-    save(savefile,'SlowWaves')
+    save(savefile,'UPDOWNstates')
 end
 
 end
