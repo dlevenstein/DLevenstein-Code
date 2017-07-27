@@ -23,6 +23,10 @@ function [ newints,mergedidx ] = MergeSeparatedInts( ints,minseparation )
 newints = ints(sort_ints,:);
 mergedidx = num2cell(sort_ints);
 
+if ~exist('minseparation','var')
+    minseparation = 0;
+end
+
 %Find ints that start before a minimum separation after the end of the 
 %previous interval
 intseparation = newints(2:end,1)-newints(1:end-1,2);

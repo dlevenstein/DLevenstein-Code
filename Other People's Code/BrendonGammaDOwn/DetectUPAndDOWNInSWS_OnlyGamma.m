@@ -114,7 +114,7 @@ intervals = intervals.intervals;
 %% Find bouts of decreased gamma (ie DOWN states)
 [b,a] = butter(4,([100/(0.5*eegsampfreq)]),'high');%create highpass filter for high gamma >100Hz
 gamma = filtfilt(b,a,raw);%filter
-gamma = convtrim(abs(gamma),(1/250)*ones(1,250));%250ms rolling avg of 100+Hz signal
+gamma = convtrim(abs(gamma),(1/250)*ones(1,250));%250ms rolling avg of 100+Hz signal (DL: this is 250 timesteps, not ms.....)
 gz = zscore(gamma);%zscore for standardization
 dg = continuousbelow2(gz,-1,minoffdur*1000/eegsampfreq,maxoffdur*1000/eegsampfreq);%find 50-500ms periods of gamma below 1SD below mean
 dg = round(dg*1000/eegsampfreq); %convert to ms
