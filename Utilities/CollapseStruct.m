@@ -61,7 +61,8 @@ for ff = 1:length(fields)
         try
         structout.(currentfield) = cat(dim,structin(:).(currentfield));
         catch
-            keyboard
+           % keyboard
+           
             continue
         end
     end
