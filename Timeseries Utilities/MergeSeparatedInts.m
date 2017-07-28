@@ -36,8 +36,8 @@ end
 %previous interval
 %This will be a matrix in which element ij is the difference between the
 %start of interval i and the end of interval j
-allintseparation = bsxfun(@minus, newints(:,1)',newints(:,2));
-smallsep = allintseparation<=minseparation; %S-E pairs all intervals
+smallsep = bsxfun(@(X,Y) (X-Y)<=minseparation, newints(:,1)',newints(:,2));
+%smallsep = allintseparation<=minseparation; %S-E pairs all intervals
 smallsep = triu(smallsep,1); %take only the interval pars where i ENDS after j
 smallsep = find(any(smallsep,2)); %intervals who start before ANY previous interval
 

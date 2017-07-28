@@ -43,20 +43,16 @@ if ~exist('basePath','var')
     basePath = pwd;
 end
 CTXChans= 'all';
-SWChann = 'autoselect';
+SWChann = [];
 NREMInts = [];
 SAVEMAT = true;
 FORCEREDETECT = true; %Change back to false...
 SHOWFIG = true;
 
 %Parms
-minOFF = 0.025; %ms
-mininterOFF = 0.03; %ms
-peakdist = 0.05;
-
 DELTApeakthresh = 2.2;
 DELTAwinthresh = 1;
-GAMMAdipthresh = 1.3;
+GAMMAdipthresh = 1.25;
 GAMMAwinthresh = 1;
 
 minwindur = 0.04;
@@ -151,7 +147,7 @@ DELTApeakheight = DELTApeakheight(keepPeaks);  DELTAwins = DELTAwins(keepPeaks,:
 
 %% Filter and get power of the LFP: gamma
 gammafilter = [100 inf]; %high pass >80Hz (previously (>100Hz)
-gammasmoothwin = 0.06; %window for smoothing gamma power 
+gammasmoothwin = 0.05; %window for smoothing gamma power 
 gammaLFP = bz_Filter(lfp,'passband',gammafilter,'filter','fir1','order',4);
 gammaLFP.smoothamp = smooth(gammaLFP.amp,round(gammasmoothwin.*gammaLFP.samplingRate),'moving' );
 
@@ -409,9 +405,6 @@ end
 %% Ouput in .event.mat format
 
 %Needs to be updated
-detectionparms.minOFF = minOFF; %ms
-detectionparms.mininterOFF = mininterOFF; %ms
-detectionparms.peakdist = peakdist;
 detectionparms.SWchannel = SWChann;
 detectionparms.CHANSELECT = CHANSELECT;
 
