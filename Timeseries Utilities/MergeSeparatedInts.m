@@ -19,7 +19,7 @@ function [ newints,mergedidx ] = MergeSeparatedInts( ints,minseparation )
 % ints = [0 3;2 4; 6 10; 10.5 13;  20 30; 19 21];
 % minseparation = 0.5;
 
-ints = [0 10; 11 19; 9 20; 25 27; 26 28];   %BUG!
+%ints = [0 10; 11 19; 9 20; 25 27; 26 28];   %BUG!
 
 %%
 %Sort Ints by their end times so all intervals end before the
