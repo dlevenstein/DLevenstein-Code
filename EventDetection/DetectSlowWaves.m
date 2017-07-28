@@ -42,8 +42,8 @@ function [ SlowWave ] = DetectSlowWaves( basePath,varargin)
 if ~exist('basePath','var')
     basePath = pwd;
 end
-CTXSpikeGroups = 'all';
-SWChann = [];
+CTXChans= 'all';
+SWChann = 'autoselect';
 NREMInts = [];
 SAVEMAT = true;
 FORCEREDETECT = true; %Change back to false...
@@ -52,11 +52,15 @@ SHOWFIG = true;
 %Parms
 minOFF = 0.025; %ms
 mininterOFF = 0.03; %ms
-peakthresh = 2.3; %for modZ (sable/OK at 2.5...)
-lowerpeakthresh = 1; %for modZ
 peakdist = 0.05;
 
-goodcellnumber = 20;
+DELTApeakthresh = 2.2;
+DELTAwinthresh = 1;
+GAMMAdipthresh = 1.3;
+GAMMAwinthresh = 1;
+
+minwindur = 0.04;
+joinwindur = 0.005;
 
 %% File Management
 baseName = bz_BasenameFromBasepath(basePath);
@@ -64,8 +68,8 @@ figfolder = fullfile(basePath,'DetectionFigures');
 savefile = fullfile(basePath,[baseName,'.SlowWave.states.mat']);
 
 if exist(savefile,'file') && ~FORCEREDETECT
-    display(['Slow Oscillation already Detected, loading ',baseName,'.UPDOWNstates.states.mat'])
-    SlowWave = bz_LoadStates(basePath,'UPDOWNstates');
+    display(['Slow Oscillation already Detected, loading ',baseName,'.SlowWave.states.mat'])
+    SlowWave = bz_LoadStates(basePath,'SlowWave');
     return
 end
 
@@ -95,11 +99,20 @@ end
    
 %LFP in the detection channel
 if ~isfield(SleepState.detectorparams,'SWchannum') && isempty(SWChann)
+    CHANSELECT = 'userinput';
     SWChann = input('Which channel shows the most robust (positive polarity) slow waves?');
 elseif isempty(SWChann)
+    CHANSELECT = 'SleepScoreSWchan';
     SWChann = SleepState.detectorparams.SWchannum;
-elseif strcmp(SWChann,'select')
-    %run SW channel selection routine: subfunction below (ChanSelect)
+elseif strcmp(SWChann,'manualselect')
+    CHANSELECT = 'manual';
+    %run SW channel selection routine: subfunction below (ManChanSelect)
+elseif strcmp(SWChann,'autoselect')
+    CHANSELECT = 'auto';
+    %run SW channel selection routine: subfunction below (AutoChanSelect)
+    SWChann = AutoChanSelect(CTXChans,basePath,NREMInts);
+else
+    CHANSELECT = 'userinput';
 end
 lfp = bz_GetLFP(SWChann,'basepath',basePath);
 
@@ -128,11 +141,6 @@ normDELTA = NormToInt(deltaLFP.data,'modZ',NREMInts,deltaLFP.samplingRate);
 % [DELTApeaks,keepPeaks] = RestrictInts(DELTApeaks,NREMInts);DELTApeaks=DELTApeaks(:,1);
 % DELTAPeakheight = peakheights(keepPeaks);
 
-DELTApeakthresh = 2.2;
-DELTAwinthresh = 1;
-minwindur = 0.04;
-joinwindur = 0.005;
-
 [DELTApeaks,DELTAwins,DELTApeakheight] = FindPeakInWin(normDELTA,deltaLFP.timestamps,DELTApeakthresh,DELTAwinthresh,minwindur,joinwindur);
 [DELTApeaks,keepPeaks] = RestrictInts(DELTApeaks,NREMInts);
 DELTApeakheight = DELTApeakheight(keepPeaks);  DELTAwins = DELTAwins(keepPeaks,:);
@@ -143,16 +151,14 @@ DELTApeakheight = DELTApeakheight(keepPeaks);  DELTAwins = DELTAwins(keepPeaks,:
 
 %% Filter and get power of the LFP: gamma
 gammafilter = [100 inf]; %high pass >80Hz (previously (>100Hz)
-gammasmoothwin = 0.075; %window for smoothing gamma power 
+gammasmoothwin = 0.06; %window for smoothing gamma power 
 gammaLFP = bz_Filter(lfp,'passband',gammafilter,'filter','fir1','order',4);
 gammaLFP.smoothamp = smooth(gammaLFP.amp,round(gammasmoothwin.*gammaLFP.samplingRate),'moving' );
 
 %% Find dips in the gamma power
-gammathresh = 1.3;
-gammawinthresh = 1;
 normGAMMA = NormToInt(gammaLFP.smoothamp,'modZ',NREMInts,gammaLFP.samplingRate);
 
-[GAMMAdips,GAMMAwins,GAMMAdipdepth] = FindPeakInWin(-normGAMMA,gammaLFP.timestamps,gammathresh,gammawinthresh,minwindur,joinwindur);
+[GAMMAdips,GAMMAwins,GAMMAdipdepth] = FindPeakInWin(-normGAMMA,gammaLFP.timestamps,GAMMAdipthresh,GAMMAwinthresh,minwindur,joinwindur);
 [GAMMAdips,keepPeaks] = RestrictInts(GAMMAdips,NREMInts);
 GAMMAdipdepth = GAMMAdipdepth(keepPeaks);  GAMMAwins = GAMMAwins(keepPeaks,:);
 %
@@ -160,6 +166,11 @@ GAMMAdipdepth = GAMMAdipdepth(keepPeaks);  GAMMAwins = GAMMAwins(keepPeaks,:);
 
 %% Merge gamma/delta windows
 [ DOWNints,mergedidx ] = MergeSeparatedInts( [DELTAwins;GAMMAwins]);
+
+if any(DOWNints(2:end,1)-DOWNints(1:end-1,2)<=0)
+    display('Merge Error... why?')
+end
+
 %Keep only those windows in which DELTA/GAMMA were merged togehter (note
 %this only works if joining happened previously... otherwise could keep
 %windows where two delta and/or two gamma were joined;
@@ -200,7 +211,7 @@ plot(deltaLFP.timestamps(sampleIDX),normDELTA(sampleIDX),'r')
 plot(GAMMAdips,-GAMMAdipdepth,'go')
 plot(DELTApeaks,DELTApeakheight,'ro')
 plot(SWpeaks,SWpeakmag,'ko')
-plot(GAMMAwins',-gammawinthresh.*ones(size(GAMMAwins')),'g')
+plot(GAMMAwins',-GAMMAwinthresh.*ones(size(GAMMAwins')),'g')
 plot(DELTAwins',DELTAwinthresh.*ones(size(DELTAwins')),'r')
 xlim(samplewin)
 subplot(2,1,2)
@@ -302,7 +313,7 @@ CCGvec = [SWpeaks,ones(size(SWpeaks));...
 
 %%
 winsize = 10; %s
-samplewin = randsample(SWpeaks,1)+winsize.*[-0.5 0.5];
+samplewin =randsample(SWpeaks,1)+winsize.*[-0.5 0.5];
 sampleIDX = lfp.timestamps>=samplewin(1) & lfp.timestamps<=samplewin(2);
 
 ratecolor = makeColorMap([1 1 1],[0.8 0 0],[0 0 0]);
@@ -382,7 +393,7 @@ subplot(3,1,3)
      
         
    % plot(deltaLFP.timestamps,normDELTA-peakthresh,'b','Linewidth',1)    
-    plot(deltaLFP.timestamps(sampleIDX),normGAMMA(sampleIDX)+gammawinthresh,'g','Linewidth',1) 
+    plot(deltaLFP.timestamps(sampleIDX),normGAMMA(sampleIDX)+GAMMAwinthresh,'g','Linewidth',1) 
     plot(deltaLFP.timestamps(sampleIDX),normDELTA(sampleIDX)-DELTAwinthresh,'b','Linewidth',1) 
     plot(spikes.spindices(:,1),spikes.spindices(:,2),'k.','MarkerSize',4)
     box off    
@@ -397,11 +408,17 @@ end
 
 %% Ouput in .event.mat format
 
+%Needs to be updated
 detectionparms.minOFF = minOFF; %ms
 detectionparms.mininterOFF = mininterOFF; %ms
-detectionparms.peakthresh = peakthresh; %for modZ
 detectionparms.peakdist = peakdist;
 detectionparms.SWchannel = SWChann;
+detectionparms.CHANSELECT = CHANSELECT;
+
+detectionparms.DELTApeakthresh = DELTApeakthresh;
+detectionparms.DELTAwinthresh = DELTAwinthresh;
+detectionparms.GAMMAdipthresh = GAMMAdipthresh;
+detectionparms.GAMMAwinthresh = GAMMAwinthresh;
 
 
 SlowWave.ints.UP = UPints;
@@ -413,8 +430,83 @@ SlowWave.detectorinfo.detectionparms = detectionparms;
 SlowWave.detectiondate = today('datetime');
 
 if SAVEMAT
-    save(savefile,'SlowWaves')
+    save(savefile,'SlowWave')
 end
 
 end
 
+
+
+
+
+
+
+
+%% Channel Selection Functions
+function usechan = AutoChanSelect(trychans,basePath,NREMInts)
+    display('Detecting best channel for slow wave detection...')
+    baseName = bz_BasenameFromBasepath(basePath);
+    figfolder = fullfile(basePath,'DetectionFigures');
+    %Exclude badchannels
+    par = bz_getSessionInfo(basePath);
+    if strcmp(trychans,'all') 
+        trychans = [par.SpkGrps(:).Channels];
+        if isfield(par,'badchannels')
+            trychans = setdiff(trychans,par.badchannels);
+        end
+    end
+    
+    
+    for cc = 1:length(trychans)
+        display(['Trying Channel ',num2str(cc),' of ',num2str(length(trychans))])
+        %Load the LFPs
+        chanlfp = bz_GetLFP(trychans(cc),'basepath',basePath);
+        %Filter in gamma
+        gammafilter = [100 inf];
+        trygammaLFP = bz_Filter(chanlfp,'passband',gammafilter,'filter','fir1','order',4);
+
+        %Restrict to NREM only - could also use intervals above to do this....
+        [chanlfp.timestamps,inNREMidx] = RestrictInts(chanlfp.timestamps,NREMInts);
+        chanlfp.data = chanlfp.data(inNREMidx,:);
+        trygammaLFP.amp = trygammaLFP.amp(inNREMidx,:);
+        %Best channel is the one in which gamma is most anticorrelated with the
+        %LFP - i.e. DOWN states (positive LFP) have low gamma power
+    
+        gammaLFPcorr(cc) = corr(single(chanlfp.data),trygammaLFP.amp,'type','spearman');
+        
+        %Save a small window for plotting
+        if ~exist('samplewin','var')
+            winsize = 4; %s
+            samplewin =randsample(chanlfp.timestamps,1)+winsize.*[-0.5 0.5];
+            sampleIDX = chanlfp.timestamps>=samplewin(1) & chanlfp.timestamps<=samplewin(2);
+            alllfp.timestamps = chanlfp.timestamps(sampleIDX);
+        end
+        alllfp.data(:,cc) = chanlfp.data(sampleIDX);
+        alllfp.channels(cc) = chanlfp.channels;
+    end
+    
+    [~,usechanIDX] = min(gammaLFPcorr);
+    usechan = trychans(usechanIDX);
+    
+    [~,sortcorr] = sort(gammaLFPcorr);
+    %% Figure
+
+    
+    figure
+    subplot(2,2,1)
+        hist(gammaLFPcorr)
+        xlabel('Gamma-LFP Correlation')
+%     subplot(2,2,3)
+%         plot(trygammaLFP.amp(:,usechanIDX),chanlfp.data(:,usechanIDX),'k.')
+%         xlabel('Gamma Power');ylabel('Raw LFP')
+    subplot(6,2,4:2:12)
+        bz_MultiLFPPlot(alllfp,'channels',trychans(sortcorr),'timewin',samplewin)
+        ylabel('Slow Wave Channel (Worse<--------->Better)')
+        
+    subplot(6,2,2)
+        plot(alllfp.timestamps,alllfp.data(:,usechanIDX),'k')
+        axis tight
+        box off
+        
+    NiceSave('SlowWaveChannelSelect',figfolder,baseName)
+end
