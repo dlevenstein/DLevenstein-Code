@@ -50,7 +50,9 @@ if iscell(signal)
     signal = vertcat(signal{:});
 end
 
-
+if ~isa(signal,'single') | ~isa(signal,'double')
+    signal = single(signal);
+end
 
 
 fmin = frange(1);

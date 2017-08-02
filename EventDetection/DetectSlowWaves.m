@@ -8,17 +8,21 @@ function [ SlowWave ] = DetectSlowWaves( basePath,varargin)
 %   (input options not yet implemented... all set to default)
 %   'NREMInts'  -Interval of times for NREM 
 %               -(Default: loaded from SleepState.states.mat)
-%   'SWChann'   -Channel with the most robust (positively deflecting) Slow
-%               Waves. (0-Indexing a la neuroscope)
+%   'SWChan'   -Channel with the most robust (positively deflecting) Slow
+%               Waves. (0-Indexing a la neuroscope). 
+%               can try 'autoselect'
 %               (Default: use SWChannel from sleep scoring)
 %   'CTXSpkGroups' -Spike groups that are in the cortex...  default: all
-%   'detectionparms' -Structure of detection parameters
+%   'CTXChans' -LFP channels that are in the cortex...  default: all
+%   'detectionparms' -Structure of detection parameters (needs update)
 %       .minOFF         (default: 0.025s)
 %       .mininterOFF    (default: 0.03s)
 %       .peakdist       (default: 0.05s)
 %       .peakthresh     (default: 2.5 stds - modified Z score)
 %   'SHOWFIG'   -true/false show a quality control figure (default: true)
 %   'saveMat'   -logical (default=true) to save in buzcode format
+%   'forceReload' -logical (default: false) to redetect (add option to use
+%                   old parameters like channels...)
 %
 %detectionparms : minOFF,mininterOFF, peakthresh (STD), peakdist (currently
 %hardcoded)
@@ -36,18 +40,27 @@ function [ SlowWave ] = DetectSlowWaves( basePath,varargin)
 %-incorporate the drop in gamma power (a la Watson et al 2016). especially
 %useful for recordings with low cell count
 %% Defaults and Parms
+p = inputParser;
+addParameter(p,'forceReload',false,@islogical);
+addParameter(p,'saveMat',true,@islogical);
+addParameter(p,'showFig',true,@islogical);
+addParameter(p,'SWChan',[]);
+addParameter(p,'NREMInts',[]);
+addParameter(p,'CTXChans','all');
+parse(p,varargin{:})
+
+FORCEREDETECT = p.Results.forceReload;
+SAVEMAT = p.Results.saveMat;
+SHOWFIG = p.Results.showFig;
+SWChann = p.Results.SWChan;
+NREMInts = p.Results.NREMInts;
+CTXChans = p.Results.CTXChans;
 
 
 %Defaults
 if ~exist('basePath','var')
     basePath = pwd;
 end
-CTXChans= 'all';
-SWChann = [];
-NREMInts = [];
-SAVEMAT = true;
-FORCEREDETECT = true; %Change back to false...
-SHOWFIG = true;
 
 %Parms
 DELTApeakthresh = 2.2;
@@ -97,7 +110,7 @@ end
 if ~isfield(SleepState.detectorparams,'SWchannum') && isempty(SWChann)
     CHANSELECT = 'userinput';
     SWChann = input('Which channel shows the most robust (positive polarity) slow waves?');
-elseif isempty(SWChann)
+elseif isempty(SWChann) %&& ismember(SleepState.detectorparams.SWchannum,CTXChans)
     CHANSELECT = 'SleepScoreSWchan';
     SWChann = SleepState.detectorparams.SWchannum;
 elseif strcmp(SWChann,'manualselect')
@@ -147,7 +160,7 @@ DELTApeakheight = DELTApeakheight(keepPeaks);  DELTAwins = DELTAwins(keepPeaks,:
 
 %% Filter and get power of the LFP: gamma
 gammafilter = [100 inf]; %high pass >80Hz (previously (>100Hz)
-gammasmoothwin = 0.05; %window for smoothing gamma power 
+gammasmoothwin = 0.07; %window for smoothing gamma power 
 gammaLFP = bz_Filter(lfp,'passband',gammafilter,'filter','fir1','order',4);
 gammaLFP.smoothamp = smooth(gammaLFP.amp,round(gammasmoothwin.*gammaLFP.samplingRate),'moving' );
 
@@ -371,7 +384,7 @@ subplot(6,1,4)
     
     xlim(samplewin)
     set(gca,'xticklabel',[]);  set(gca,'ytick',[])
-    ylabel('LFP')
+    ylabel({'LFP',['Chan: ',num2str(SWChann)]})
     
 subplot(3,1,3)
     bar(tspike_NREM,synchmat_NREM,'facecolor',[0.5 0.5 0.5])
@@ -407,6 +420,7 @@ end
 %Needs to be updated
 detectionparms.SWchannel = SWChann;
 detectionparms.CHANSELECT = CHANSELECT;
+detectionparms.CTXChans = CTXChans;
 
 detectionparms.DELTApeakthresh = DELTApeakthresh;
 detectionparms.DELTAwinthresh = DELTAwinthresh;
@@ -426,6 +440,7 @@ if SAVEMAT
     save(savefile,'SlowWave')
 end
 
+display('Slow Wave Detection: COMPLETE!')
 end
 
 
@@ -444,11 +459,10 @@ function usechan = AutoChanSelect(trychans,basePath,NREMInts)
     par = bz_getSessionInfo(basePath);
     if strcmp(trychans,'all') 
         trychans = [par.SpkGrps(:).Channels];
-        if isfield(par,'badchannels')
-            trychans = setdiff(trychans,par.badchannels);
-        end
     end
-    
+    if isfield(par,'badchannels')
+    	trychans = setdiff(trychans,par.badchannels);
+    end
     
     for cc = 1:length(trychans)
         display(['Trying Channel ',num2str(cc),' of ',num2str(length(trychans))])
@@ -480,6 +494,8 @@ function usechan = AutoChanSelect(trychans,basePath,NREMInts)
     
     [~,usechanIDX] = min(gammaLFPcorr);
     usechan = trychans(usechanIDX);
+    
+    display(['Selected Channel: ',num2str(usechan)])
     
     [~,sortcorr] = sort(gammaLFPcorr);
     %% Figure
