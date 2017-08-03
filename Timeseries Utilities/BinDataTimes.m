@@ -1,6 +1,8 @@
 function [ bincenters,binmeans,binstd,binnum ] = BinDataTimes( data,times,binedges,varargin )
 %[ bincenters,binmeans,binstd,binnum ] = BinDataTimes( data,times,binedges )
 %%
+if isrow(data); data = data'; end
+
 numbins = length(binedges)-1;
 numdatacols = length(data(1,:));
 %%
