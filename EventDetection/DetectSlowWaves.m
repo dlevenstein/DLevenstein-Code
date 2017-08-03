@@ -138,13 +138,13 @@ allspikes = sort(cat(1,spikes.times{:}));
 
 %% Filter the LFP: delta
 display('Filtering LFP')
-deltafilterbounds = [0.3 6]; %heuristically defined.  room for improvement here.
+deltafilterbounds = [0.5 6]; %heuristically defined.  room for improvement here.
 deltaLFP = bz_Filter(lfp,'passband',deltafilterbounds,'filter','fir1','order',1);
 deltaLFP.normamp = NormToInt(deltaLFP.data,'modZ',NREMInts,deltaLFP.samplingRate);
 
 %% Filter and get power of the LFP: gamma
 gammafilter = [100 inf]; %high pass >80Hz (previously (>100Hz)
-gammasmoothwin = 0.1; %window for smoothing gamma power 
+gammasmoothwin = 0.08; %window for smoothing gamma power 
 gammaLFP = bz_Filter(lfp,'passband',gammafilter,'filter','fir1','order',4);
 gammaLFP.smoothamp = smooth(gammaLFP.amp,round(gammasmoothwin.*gammaLFP.samplingRate),'moving' );
 gammaLFP.normamp = NormToInt(gammaLFP.smoothamp,'modZ',NREMInts,gammaLFP.samplingRate);
@@ -532,6 +532,12 @@ function [thresholds,threshfigs] = DetermineThresholds(deltaLFP,gammaLFP,spikes,
 
     GAMMAbox=bwmorph(ratemat_byGAMMAmag<ratethresh,'close');
     GAMMAbox=bwmorph(GAMMAbox,'open');
+    if sum(GAMMAbox(:))== 0
+        display('No DOWN around gamma dip.... perhaps adjust rate threshold or pick another channel?')
+        GAMMAwinthresh = 1.2;
+        GAMMAwinthresh = 1;
+        GAMMAbox = [1 1];
+    else
     GAMMAbox=bwboundaries(GAMMAbox); GAMMAbox = GAMMAbox{1};
     GAMMAbox(GAMMAbox(:,2)==max(GAMMAbox(:,2)),:)=[];
     GAMMAdipthresh = GAMMAmagbins(min(GAMMAbox(:,2)));
@@ -539,7 +545,7 @@ function [thresholds,threshfigs] = DetermineThresholds(deltaLFP,gammaLFP,spikes,
     GAMMAwinthresh = gammapower_byGAMMAmag(sub2ind(size(gammapower_byGAMMAmag),...
         round(GAMMAbox(:,1).*scalefactor),GAMMAbox(:,2)));
     GAMMAwinthresh = -mean(GAMMAwinthresh);
-
+    end
     
     thresholds.DELTApeakthresh = DELTApeakthresh;
     thresholds.DELTAwinthresh = DELTAwinthresh;
