@@ -1,4 +1,4 @@
-function [ SlowWave ] = DetectSlowWaves( basePath,varargin)
+function [ SlowWaves ] = DetectSlowWaves( basePath,varargin)
 %[UPDOWNstates] = DetectSlowWave(basePath) detects neocortical slow
 %waves using a combination of a positive deflection in the LFP (delta wave)
 %and a dip in gamma power.
@@ -75,11 +75,11 @@ joinwindur = 0.005;
 %% File Management
 baseName = bz_BasenameFromBasepath(basePath);
 figfolder = fullfile(basePath,'DetectionFigures');
-savefile = fullfile(basePath,[baseName,'.SlowWave.states.mat']);
+savefile = fullfile(basePath,[baseName,'.SlowWaves.events.mat']);
 
 if exist(savefile,'file') && ~FORCEREDETECT
     display(['Slow Oscillation already Detected, loading ',baseName,'.SlowWave.states.mat'])
-    SlowWave = bz_LoadStates(basePath,'SlowWave');
+    SlowWaves = bz_LoadStates(basePath,'SlowWave');
     return
 end
 
@@ -122,9 +122,9 @@ elseif strcmp(SWChann,'autoselect')
     %run SW channel selection routine: subfunction below (AutoChanSelect)
     SWChann = AutoChanSelect(CTXChans,basePath,NREMInts);
 elseif strcmp(SWChann,'useold')
-    SlowWave = bz_LoadStates(basePath,'SlowWave');
-    CHANSELECT = SlowWave.detectorinfo.detectionparms.CHANSELECT;
-    SWChann = SlowWave.detectorinfo.detectionparms.SWchannel;
+    SlowWaves = bz_LoadStates(basePath,'SlowWave');
+    CHANSELECT = SlowWaves.detectorinfo.detectionparms.CHANSELECT;
+    SWChann = SlowWaves.detectorinfo.detectionparms.SWchannel;
 else
     CHANSELECT = 'userinput';
 end
@@ -338,13 +338,13 @@ detectionparms.CHANSELECT = CHANSELECT;
 detectionparms.CTXChans = CTXChans;
 detectionparms.thresholds = thresholds;
 
-SlowWave.ints.UP = UPints;
-SlowWave.ints.DOWN = DOWNints;
-SlowWave.SWpeaks = SWpeaks;
-SlowWave.SWpeakmag = SWpeakmag;
-SlowWave.detectorinfo.detectorname = 'DetectSlowWaves';
-SlowWave.detectorinfo.detectionparms = detectionparms;
-SlowWave.detectorinfo.detectiondate = today('datetime');
+SlowWaves.ints.UP = UPints;
+SlowWaves.ints.DOWN = DOWNints;
+SlowWaves.timestamps = SWpeaks;
+SlowWaves.SWpeakmag = SWpeakmag;
+SlowWaves.detectorinfo.detectorname = 'DetectSlowWaves';
+SlowWaves.detectorinfo.detectionparms = detectionparms;
+SlowWaves.detectorinfo.detectiondate = today('datetime');
 
 if SAVEMAT
     save(savefile,'SlowWave')
