@@ -451,7 +451,7 @@ function [thresholds,threshfigs] = DetermineThresholds(deltaLFP,gammaLFP,spikes,
     %% Get the spike PETH around delta/gamma peaks
     display('Calculating PETH by Peak For Threshold Calibration')
     win = 1;
-    numchecks = 15000;
+    numchecks = 25000;
 
     numtimebins = 200;
     nummagbins = 30;
@@ -470,7 +470,7 @@ function [thresholds,threshfigs] = DetermineThresholds(deltaLFP,gammaLFP,spikes,
         sampleDELTA = 1:length(DELTApeaks);
     end
     nearpeakdelta = zeros(2.*win.*deltaLFP.samplingRate+1,nummagbins);
-    DELTAmagbins = linspace(min(DELTAPeakheight),min([max(DELTAPeakheight)-1,8]), nummagbins);
+    DELTAmagbins = linspace(min(DELTAPeakheight),min([max(DELTAPeakheight)-1,5]), nummagbins);
     for pp = 1:length(sampleDELTA)
         ss = sampleDELTA(pp);
 
@@ -499,7 +499,7 @@ function [thresholds,threshfigs] = DetermineThresholds(deltaLFP,gammaLFP,spikes,
     else
         sampleGAMMA = 1:length(GAMMAdips);
     end
-    GAMMAmagbins = linspace(min(GAMMAdipdepth),min([max(GAMMAdipdepth)-0.5,8]),nummagbins);
+    GAMMAmagbins = linspace(min(GAMMAdipdepth),min([max(GAMMAdipdepth)-0.5,4]),nummagbins);
     neardipgamma = zeros(2.*win.*gammaLFP.samplingRate+1,nummagbins);
     for pp = 1:length(sampleGAMMA)
         ss = sampleGAMMA(pp);
@@ -518,10 +518,23 @@ function [thresholds,threshfigs] = DetermineThresholds(deltaLFP,gammaLFP,spikes,
     ratemat_byGAMMAmag = bsxfun(@(A,B) A./B./mean(diff(timebins))./numcells,spikehitmat,peakmagdist);
     gammapower_byGAMMAmag = bsxfun(@(A,B) A./B,neardipgamma,peakmagdist);
     %% Find Thresholds as values where spike rate falls below threshold
-    ratethresh = 0.2;
+    %Set the rate threshold to halfway between that at the delta peak and
+    %the average around DELTA
+    ratemat_byDELTAmag = imgaussfilt(ratemat_byDELTAmag,2);
+    ratemat_byGAMMAmag = imgaussfilt(ratemat_byGAMMAmag,2);
+    meanratearoundDELTA = mean(ratemat_byDELTAmag(:));
+    minrateatDELTApeak = min(ratemat_byDELTAmag(round(end/2),:));
+    DELTAraterange = meanratearoundDELTA-minrateatDELTApeak;
+    ratethresh = minrateatDELTApeak+(0.5.*DELTAraterange);
 
     DELTAbox=bwmorph(ratemat_byDELTAmag<ratethresh,'close');
     DELTAbox=bwmorph(DELTAbox,'open');
+    if sum(DELTAbox(:))== 0
+        display('No DOWN around gamma dip.... perhaps adjust rate threshold or pick another channel?')
+        DELTApeakthresh = 2.2;
+        DELTAwinthresh = 1;
+        DELTAbox = [1 1];
+    else
     DELTAbox=bwboundaries(DELTAbox); DELTAbox = DELTAbox{1};
     DELTAbox(DELTAbox(:,2)==max(DELTAbox(:,2)),:)=[];
     DELTApeakthresh = DELTAmagbins(min(DELTAbox(:,2)));
@@ -529,16 +542,17 @@ function [thresholds,threshfigs] = DetermineThresholds(deltaLFP,gammaLFP,spikes,
     DELTAwinthresh = deltapower_byDELTAmag(sub2ind(size(deltapower_byDELTAmag),...
         round(DELTAbox(:,1).*scalefactor),DELTAbox(:,2)));
     DELTAwinthresh = mean(DELTAwinthresh);
-
+    end
+    
     GAMMAbox=bwmorph(ratemat_byGAMMAmag<ratethresh,'close');
     GAMMAbox=bwmorph(GAMMAbox,'open');
-    if sum(GAMMAbox(:))== 0
+    if sum(GAMMAbox(:))== 0   %will have issue here with no dip recordings... bad channel.
         display('No DOWN around gamma dip.... perhaps adjust rate threshold or pick another channel?')
-        GAMMAwinthresh = 1.2;
+        GAMMAdipthresh = 1.2;
         GAMMAwinthresh = 1;
         GAMMAbox = [1 1];
     else
-    GAMMAbox=bwboundaries(GAMMAbox); GAMMAbox = GAMMAbox{1};
+    GAMMAbox=bwboundaries(GAMMAbox); GAMMAbox = GAMMAbox{1}; %might have issue here with no dip recordings... "multiple objects"
     GAMMAbox(GAMMAbox(:,2)==max(GAMMAbox(:,2)),:)=[];
     GAMMAdipthresh = GAMMAmagbins(min(GAMMAbox(:,2)));
     scalefactor = length(neardipgamma)./numtimebins; %convert number of bins for LFP and spikes
@@ -560,32 +574,40 @@ function [thresholds,threshfigs] = DetermineThresholds(deltaLFP,gammaLFP,spikes,
         hold on
         plot(timebins(DELTAbox(:,1)),DELTAmagbins(DELTAbox(:,2)),'r.')
         plot(get(gca,'xlim'),DELTApeakthresh.*[1 1],'k--')
+        plot(get(gca,'xlim'),DELTAwinthresh.*[1 1],'k:')
         xlabel('t (relative to SW peak)');ylabel({'SW Peak Amplitude', '(modZ)'})
         axis xy
+        xlim([-0.7 0.7])
 
     threshfigs.GAMMArate = subplot(2,2,4);
         imagesc(timebins,GAMMAmagbins,ratemat_byGAMMAmag')
         hold on
         plot(timebins(GAMMAbox(:,1)),GAMMAmagbins(GAMMAbox(:,2)),'r.')
         plot(get(gca,'xlim'),GAMMAdipthresh.*[1 1],'k--')
+        plot(get(gca,'xlim'),GAMMAwinthresh.*[1 1],'k:')
         xlabel('t (relative to GA Dip)');ylabel({'GA Dip Amplitude', '(modZ)'})
+        xlim([-0.7 0.7])
 
     threshfigs.DELTApower = subplot(2,2,1);
         imagesc(timebins,DELTAmagbins,deltapower_byDELTAmag')
         hold on
         plot(timebins(DELTAbox(:,1)),DELTAmagbins(DELTAbox(:,2)),'r.')
         plot(get(gca,'xlim'),DELTApeakthresh.*[1 1],'k--')
-        colorbar
+        plot(get(gca,'xlim'),DELTAwinthresh.*[1 1],'k:')
+        colorbar('east')
         xlabel('t (relative to SW peak)');ylabel({'SW Peak Amplitude', '(modZ)'})
         axis xy
+        xlim([-0.7 0.7])
 
     threshfigs.GAMMApower = subplot(2,2,2);
         imagesc(timebins,GAMMAmagbins,gammapower_byGAMMAmag')
         hold on
         plot(timebins(GAMMAbox(:,1)),GAMMAmagbins(GAMMAbox(:,2)),'r.')
         plot(get(gca,'xlim'),GAMMAdipthresh.*[1 1],'k--')
+        plot(get(gca,'xlim'),GAMMAwinthresh.*[1 1],'k:')
         xlabel('t (relative to GA Dip)');ylabel({'GA Dip Amplitude', '(modZ)'})
-        colorbar
+        colorbar('east')
+        xlim([-0.7 0.7])
 
 end
     
