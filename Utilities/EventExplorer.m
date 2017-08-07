@@ -1,4 +1,4 @@
-function [ output_args ] = EventExplorer(eventsname,basePath )
+function [ EEoutput ] = EventExplorer(eventsname,basePath )
 %UNTITLED2 Summary of this function goes here
 %   Detailed explanation goes here
 %
@@ -50,9 +50,12 @@ restrictint = SleepState.ints.NREMstate;
 lfp = bz_GetLFP(usechans,'basepath',FO.basePath);
 spikes = bz_GetSpikes('basepath',FO.basePath);
 %%
+
 FO.fig = figure;
 set(FO.fig, 'numbertitle', 'off', 'name', ['Recording: ', FO.baseName,'. Events: ',FO.EventName]);
 set(FO.fig, 'Tag', 'EventExplorerMaster');
+%set(FO.fig, 'CloseRequestFcn', {@CloseDialog}); The close function
+set(FO.fig,'WindowButtonDownFcn', {@MouseClick});
 
 %From StateEditor
 % FO.fig = figure('KeyReleaseFcn', {@DefKey}, 'Position', posvar);
@@ -73,7 +76,9 @@ numevents = 50; %number of events to look at. determine to maximize sampling or 
 randevents = randi(length(FO.EventTimes),[numevents,1]);
 randevents = FO.EventTimes(randevents);
 
-%Find any events that are within winsize of another event
+%Find any events that are within winsize of another event to remove them?
+%Also should look at windows in which no events were detected?  Maybe just
+%random windows in the detectionwin
 closeevents = abs(diff(randevents))<winsize;
 % numtries =0;
 % while any(closeevents) && numtries<50
@@ -84,41 +89,77 @@ closeevents = abs(diff(randevents))<winsize;
 
 %% Loop figure to show events and get user input
 
+%Store the current user action
+FO.currentuseraction = 'MarkEvents';
+FO.markedevents = [];
+guidata(FO.fig, FO);
+
+%Set up the counters
 counter = numevents;
 miss=[];correct=[];falsealarm=[];
+
+
+correcttext = uicontrol(FO.fig,'Position',[40 60 125 10],'style','text',...
+    'string','Correct: 0','HorizontalAlignment','left'); 
+misstext = uicontrol(FO.fig,'Position',[40 45 125 10],'style','text',...
+    'string','Miss: 0','HorizontalAlignment','left');
+FAtext = uicontrol(FO.fig,'Position',[40 30 125 10],'style','text',...
+    'string','FA: 0','HorizontalAlignment','left');
+countetext = uicontrol(FO.fig,'Position',[40 80 125 10],'style','text',...
+    'string',['Windows Remaining: ',num2str(counter)],'HorizontalAlignment','left');
+
+
 QUITLOOP = false;
 while counter>0 && QUITLOOP~=true
+    NEXTWIN=false;
     %EventUI(FO)   %function that will run the user interface
     thiseventtime = randevents(counter);
     thiseventwin = thiseventtime+winsize.*[-0.5 0.5];
     inwinevents = FO.EventTimes(FO.EventTimes>=thiseventwin(1) &FO.EventTimes<=thiseventwin(2));
     
-    lfpwin = subplot(3,1,2);
+    lfpwin = subplot(3,1,2,'ButtonDownFcn',@MouseClick);
+    %set(gca,'ButtonDownFcn', @MouseClick)
     bz_MultiLFPPlot(lfp,'timewin',thiseventwin,'spikes',spikes)
     hold on
-    %plot(spikes.spindices(:,1),spikes.spindices(:,2),'.')
-    plot(inwinevents,zeros(size(inwinevents)),'r+')
+    plot(inwinevents,zeros(size(inwinevents)),'o','color',[0 0.6 0])
     
     %Get user feedback
-    title({'Left click missed events. Right click incorrectly ID''d events.',...
-        'RETURN when complete. ESC,RETURN to finish early.',...
-        [num2str(counter),' Windows Remain']})
-    [x,y,button] = ginput;
-    miss = [miss; x(button==1)];
-    falsealarm = [falsealarm; interp1(inwinevents,inwinevents,x(button==3),'nearest')]; 
-    correct = [correct; inwinevents(~ismember(inwinevents,falsealarm))];
-    if any(button==27);QUITLOOP=true;end
+    title('Left click missed events. Right click incorrectly ID''d events.')
+    %[x,y,button] = ginput;
+
+    %if any(button==27);QUITLOOP=true;end
     
     %Update window to show how many misses/FAs have been ID'd
-    %When click.... mark the event as FA or miss on screen...
+    %When click.... mark the event as FA or miss on screen... with red o,x
     %Top window to give context?
     %Instructions window
     
+    %Buttons for next loop or finishing
+    h = uicontrol('Position',[380 20 125 40],'String','Next Window (Return)',...
+              'Callback','uiresume(gcbf)');
+    qutbtn = uicontrol('Position',[380 65 125 40],'String','Quit Early (Esc)',...
+             'Callback','QUITLOOP=true;uiresume(gcbf)');
+    
+    uiwait(FO.fig)
     hold off
     counter = counter-1;
     
+    %Tally the user selections for that window
+    obj = findobj('tag','EventExplorerMaster');  FO = guidata(obj);
+    if ~isempty(FO.markedevents)
+        miss = [miss; FO.markedevents(FO.markedevents(:,3)==1,1)];
+        falsealarm = [falsealarm; interp1(inwinevents,inwinevents,FO.markedevents(FO.markedevents(:,3)==3,1),'nearest')]; 
+    end
+    correct = [correct; inwinevents(~ismember(inwinevents,falsealarm))];
+    FO.markedevents = [];  guidata(FO.fig, FO); %reset the event counter
+    
+    set(correcttext, 'String',['Correct: ',num2str(length(correct))]);
+    set(misstext, 'String', ['Miss: ',num2str(length(miss))]);
+    set(FAtext, 'String', ['FA: ',num2str(length(falsealarm))]);
+    set(countetext, 'String', ['Windows Remaining: ',num2str(counter)]);
 end
     
+%What to do after the loop?
 %%
 %Calculate number of misses/s, false alarms/s, corrects/s?
 %Estimate miss% from miss./(correct+miss);
@@ -131,6 +172,7 @@ estFAperc = numFA./(numcorrect+numFA)
 
 %After looking at Xmin of Y total detection minutes, we've found that your
 %detector is missing an estimated 12% of events and falsely detecting 0%
+
 
 end
 

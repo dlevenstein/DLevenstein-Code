@@ -1,5 +1,5 @@
 function [ SlowWaves ] = DetectSlowWaves( basePath,varargin)
-%[UPDOWNstates] = DetectSlowWave(basePath) detects neocortical slow
+%[UPDOWNstates] = DetectSlowWaves(basePath) detects neocortical slow
 %waves using a combination of a positive deflection in the LFP (delta wave)
 %and a dip in gamma power.
 %
