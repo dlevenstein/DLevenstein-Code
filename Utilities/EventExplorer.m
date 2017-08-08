@@ -1,11 +1,11 @@
-function [ EEoutput ] = EventExplorer(eventsname,basePath )
+function [ EEoutput ] = EventExplorer(events,basePath )
 %UNTITLED2 Summary of this function goes here
 %   Detailed explanation goes here
 %
 %DLevenstein 2017
 %%
-eventsname = 'SlowWave';
-basePath = '/Users/dlevenstein/Dropbox/Research/Datasets/20140526_277um';
+%eventsname = 'SlowWave';
+%basePath = '/Users/dlevenstein/Dropbox/Research/Datasets/20140526_277um';
 %%
 if ~exist('basePath','var')
     basePath = pwd;
@@ -14,28 +14,34 @@ baseName = bz_BasenameFromBasepath(basePath);
 
 
 %%
+
 %A0 = EE_Initiate(
 %% Select the Events
 %eventsfile = fullfile(basePath,[baseName,'.',eventsname,'.events.mat']);
 
 %events = bz_LoadEvents(eventsname);
 
-events = bz_LoadStates(basePath,eventsname);
-eventstype = 'states';
+if isstring(events)
+    events = bz_LoadStates(basePath,eventsname);
+    eventstype = 'states';
 
-switch eventstype
-    case 'states'
-        intnames = [fieldnames(events.ints);fieldnames(events)];
-        [s,v] = listdlg('PromptString','Which interval type to explore?',...
-            'SelectionMode','single','ListString',intnames);
-        exploreintname = intnames{s};
-        try
-        exploreint = events.ints.(exploreintname);
-        catch
-            exploreint = events.(exploreintname);
-        end
+    switch eventstype
+        case 'states'
+            intnames = [fieldnames(events.ints);fieldnames(events)];
+            [s,v] = listdlg('PromptString','Which interval type to explore?',...
+                'SelectionMode','single','ListString',intnames);
+            exploreintname = intnames{s};
+            try
+            exploreint = events.ints.(exploreintname);
+            catch
+                exploreint = events.(exploreintname);
+            end
+    end
+
+elseif isstruct(events)
+    exploreint = events.timestamps;
+    exploreintname = events.detectorinfo.detectorname;
 end
-
 %% 
 FO.baseName = baseName;
 FO.EventTimes = exploreint;
@@ -51,7 +57,17 @@ lfp = bz_GetLFP(usechans,'basepath',FO.basePath);
 spikes = bz_GetSpikes('basepath',FO.basePath);
 %%
 
-FO.fig = figure;
+posvar = get(0,'Screensize');
+posvar(1) = 20;
+posvar(2) = 20;
+posvar(3) = posvar(3)-100;
+posvar(4) = posvar(4)-100;
+
+%Old figure should be closed
+oldfig = findobj('tag','EventExplorerMaster');
+close(oldfig)
+%Start the figure
+FO.fig = figure('Position', posvar);
 set(FO.fig, 'numbertitle', 'off', 'name', ['Recording: ', FO.baseName,'. Events: ',FO.EventName]);
 set(FO.fig, 'Tag', 'EventExplorerMaster');
 %set(FO.fig, 'CloseRequestFcn', {@CloseDialog}); The close function
@@ -72,10 +88,12 @@ guidata(FO.fig, FO);
 
 %% Select the time windows to look at 
 winsize = 8; %(s) user input this or determine based on event frequency
-numevents = 50; %number of events to look at. determine to maximize sampling or have user input (FO.uinput.field?)
-randevents = randi(length(FO.EventTimes),[numevents,1]);
-randevents = FO.EventTimes(randevents);
-
+numevents = 25; %number of events to look at. determine to maximize sampling or have user input (FO.uinput.field?)
+%Selecting from events:
+randevents = randsample(FO.EventTimes,numevents);
+%Selecting from random times
+[NREMtime,~,~] = RestrictInts(lfp.timestamps,restrictint);
+randevents = randsample(NREMtime,numevents);
 %Find any events that are within winsize of another event to remove them?
 %Also should look at windows in which no events were detected?  Maybe just
 %random windows in the detectionwin
@@ -111,7 +129,6 @@ countetext = uicontrol(FO.fig,'Position',[40 80 125 10],'style','text',...
 
 QUITLOOP = false;
 while counter>0 && QUITLOOP~=true
-    NEXTWIN=false;
     %EventUI(FO)   %function that will run the user interface
     thiseventtime = randevents(counter);
     thiseventwin = thiseventtime+winsize.*[-0.5 0.5];
@@ -148,7 +165,17 @@ while counter>0 && QUITLOOP~=true
     obj = findobj('tag','EventExplorerMaster');  FO = guidata(obj);
     if ~isempty(FO.markedevents)
         miss = [miss; FO.markedevents(FO.markedevents(:,3)==1,1)];
-        falsealarm = [falsealarm; interp1(inwinevents,inwinevents,FO.markedevents(FO.markedevents(:,3)==3,1),'nearest')]; 
+        
+        %This is messy to account for interp errors with 0-1 reference points
+        if isempty(FO.markedevents(FO.markedevents(:,3)==3,1))
+            newfalsealarms = [];
+        elseif length(FO.markedevents(FO.markedevents(:,3)==3,1))==1 && length(inwinevents)==1
+            newfalsealarms = inwinevents;
+        else
+        newfalsealarms = interp1(inwinevents,inwinevents,FO.markedevents(FO.markedevents(:,3)==3,1),'nearest');
+        end
+        falsealarm = [falsealarm; newfalsealarms];
+        
     end
     correct = [correct; inwinevents(~ismember(inwinevents,falsealarm))];
     FO.markedevents = [];  guidata(FO.fig, FO); %reset the event counter
@@ -167,12 +194,15 @@ end
 nummiss = length(miss);
 numcorrect = length(correct);
 numFA = length(falsealarm);
-estmissperc = nummiss./(numcorrect+nummiss)
-estFAperc = numFA./(numcorrect+numFA)
+estmissperc = nummiss./(numcorrect+nummiss);
+estFAperc = numFA./(numcorrect+numFA);
 
 %After looking at Xmin of Y total detection minutes, we've found that your
 %detector is missing an estimated 12% of events and falsely detecting 0%
 
-
+EEoutput.ROCresults.FA = estFAperc;
+EEoutput.ROCresults.TP = 1-estmissperc;
+%%
+close(FO.fig)
 end
 

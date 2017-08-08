@@ -1,4 +1,4 @@
-function [ SlowWaves ] = DetectSlowWaves( basePath,varargin)
+function [ SlowWaves,VerboseOut ] = DetectSlowWaves( basePath,varargin)
 %[UPDOWNstates] = DetectSlowWaves(basePath) detects neocortical slow
 %waves using a combination of a positive deflection in the LFP (delta wave)
 %and a dip in gamma power.
@@ -20,6 +20,8 @@ function [ SlowWaves ] = DetectSlowWaves( basePath,varargin)
 %       .mininterOFF    (default: 0.03s)
 %       .peakdist       (default: 0.05s)
 %       .peakthresh     (default: 2.5 stds - modified Z score)
+%   'ratethresh' -rate threshold (0-1) for determining LFP thresholds
+%                   (default 0.5)
 %   'SHOWFIG'   -true/false show a quality control figure (default: true)
 %   'saveMat'   -logical (default=true) to save in buzcode format
 %   'forceReload' -logical (default: false) to redetect (add option to use
@@ -29,7 +31,8 @@ function [ SlowWaves ] = DetectSlowWaves( basePath,varargin)
 %hardcoded)
 %
 %OUTPUTS
-%   UPDOWNstates    a buzcode structure
+%   SlowWaves    a buzcode structure
+%   VerboseOut   extra output stuff for detection quality checks/figures
 %
 %
 %
@@ -41,6 +44,8 @@ function [ SlowWaves ] = DetectSlowWaves( basePath,varargin)
 %-incorporate the drop in gamma power (a la Watson et al 2016). especially
 %useful for recordings with low cell count
 %% Defaults and Parms
+ratevalidation = @(x) x>0 & x<1;
+
 p = inputParser;
 addParameter(p,'forceReload',false,@islogical);
 addParameter(p,'saveMat',true,@islogical);
@@ -48,6 +53,7 @@ addParameter(p,'showFig',true,@islogical);
 addParameter(p,'SWChan',[]);
 addParameter(p,'NREMInts',[]);
 addParameter(p,'CTXChans','all');
+addParameter(p,'ratethresh',0.5,ratevalidation);
 parse(p,varargin{:})
 
 FORCEREDETECT = p.Results.forceReload;
@@ -56,6 +62,7 @@ SHOWFIG = p.Results.showFig;
 SWChann = p.Results.SWChan;
 NREMInts = p.Results.NREMInts;
 CTXChans = p.Results.CTXChans;
+ratethresh = p.Results.ratethresh;
 
 
 %Defaults
@@ -150,7 +157,7 @@ gammaLFP.smoothamp = smooth(gammaLFP.amp,round(gammasmoothwin.*gammaLFP.sampling
 gammaLFP.normamp = NormToInt(gammaLFP.smoothamp,'modZ',NREMInts,gammaLFP.samplingRate);
 
 %% Determine Thresholds and find windows around delta peaks/gamma dips
-[thresholds,threshfigs] = DetermineThresholds(deltaLFP,gammaLFP,spikes,NREMInts);
+[thresholds,threshfigs] = DetermineThresholds(deltaLFP,gammaLFP,spikes,NREMInts,ratethresh);
 
 %Find peaks in the delta LFP
 [DELTApeaks,DELTAwins,DELTApeakheight] = FindPeakInWin(deltaLFP.normamp,deltaLFP.timestamps,...
@@ -227,7 +234,7 @@ xlabel('Gamma Power');ylabel('Delta LFP')
 
 
 %%   Stuff for the detection figure
-if SHOWFIG  
+if SHOWFIG || nargout>1
 
 %% Calculate Binned Population Rate
 display('Binning Spikes')
@@ -245,14 +252,29 @@ synchmat_NREM = synchmat(tidx_NREM);
 ratemat_NREM = ratemat(tidx_NREM);
 
 %% CCG of SLow Waves and spikes
-[SW_CCG,t_CCG] = CCG(SWpeaks,ones(size(SWpeaks)),'binSize',0.02);
+%[SW_CCG,t_CCG] = CCG(SWpeaks,ones(size(SWpeaks)),'binSize',0.02);
 
 %With Spikes
 CCGvec = [SWpeaks,ones(size(SWpeaks));...
     allspikes,2.*ones(size(allspikes))];
-[SWspike_CCG,t_CCG] = CCG(CCGvec(:,1),CCGvec(:,2),'binSize',0.02);
+[SWspike_CCG,t_CCG] = CCG(CCGvec(:,1),CCGvec(:,2),'binSize',0.02,'norm','rate');
 
-%%
+%% Histogram
+
+UPDOWNdurhist.logbins = linspace(log10(0.02),log10(50),40);
+[UPDOWNdurhist.DOWN,~] = hist(log10(DOWNdur),UPDOWNdurhist.logbins);
+[UPDOWNdurhist.UP,~] = hist(log10(UPdur),UPDOWNdurhist.logbins);
+UPDOWNdurhist.DOWN = UPDOWNdurhist.DOWN./sum(UPDOWNdurhist.DOWN);
+UPDOWNdurhist.UP = UPDOWNdurhist.UP./sum(UPDOWNdurhist.UP);
+%% Output for figues etc
+VerboseOut.CCG.t_CCG =t_CCG;
+VerboseOut.CCG.spikes = SWspike_CCG(:,1,2)./numcells;
+VerboseOut.CCG.SWs = SWspike_CCG(:,1,1);
+VerboseOut.UPDOWNdurhist = UPDOWNdurhist;
+end
+
+%% DETECTION FIGURE
+if SHOWFIG
 winsize = 10; %s
 samplewin =randsample(SWpeaks,1)+winsize.*[-0.5 0.5];
 sampleIDX = lfp.timestamps>=samplewin(1) & lfp.timestamps<=samplewin(2);
@@ -269,7 +291,7 @@ figure
 
     
 subplot(8,2,1)
-    bar(t_CCG,SW_CCG,'facecolor','g','FaceAlpha',0.2)
+    bar(t_CCG,SWspike_CCG(:,1,1),'facecolor','g','FaceAlpha',0.2)
     hold on
     plot([0 0],get(gca,'ylim'),'k-')
     xlim([-0.8 0.8])
@@ -283,11 +305,13 @@ subplot(8,2,3)
     ylabel('Spike Rate');
     
 subplot(8,2,2)
-    hist(log10(UPdur),40)
+    plot(UPDOWNdurhist.logbins,UPDOWNdurhist.UP,'r','linewidth',2)
+    hold on
+    plot(UPDOWNdurhist.logbins,UPDOWNdurhist.DOWN,'b','linewidth',2)
     LogScale('x',10)
-subplot(8,2,4)
-    hist(log10(DOWNdur),40)
-    LogScale('x',10)
+% subplot(8,2,4)
+%     hist(log10(DOWNdur),40)
+%     LogScale('x',10)
    
     
 subplot(6,1,4)
@@ -324,7 +348,7 @@ subplot(3,1,3)
     box off    
     xlim(samplewin)
     ylabel('Cells');xlabel('t (s)')
-    legend('Spike Synchrony','OFF States','DOWN States','Filtered LFP')
+    legend('Spike Synchrony','Slow Waves','Gamma Power','Delta-Filtered LFP')
     
 NiceSave('SlowOscillation',figfolder,baseName)
 
@@ -433,7 +457,7 @@ end
 
 
 %% Threshold Determination Function
-function [thresholds,threshfigs] = DetermineThresholds(deltaLFP,gammaLFP,spikes,NREMInts)
+function [thresholds,threshfigs] = DetermineThresholds(deltaLFP,gammaLFP,spikes,NREMInts,ratethresh)
     display('Determining delta/gamma thresholds for detection...')
     minwindur = 0.04; %should pass through... but not super important
     
@@ -451,7 +475,7 @@ function [thresholds,threshfigs] = DetermineThresholds(deltaLFP,gammaLFP,spikes,
     %% Get the spike PETH around delta/gamma peaks
     display('Calculating PETH by Peak For Threshold Calibration')
     win = 1;
-    numchecks = 25000;
+    numchecks = 20000;
 
     numtimebins = 200;
     nummagbins = 30;
@@ -525,9 +549,10 @@ function [thresholds,threshfigs] = DetermineThresholds(deltaLFP,gammaLFP,spikes,
     meanratearoundDELTA = mean(ratemat_byDELTAmag(:));
     minrateatDELTApeak = min(ratemat_byDELTAmag(round(end/2),:));
     DELTAraterange = meanratearoundDELTA-minrateatDELTApeak;
-    ratethresh = minrateatDELTApeak+(0.5.*DELTAraterange);
+    
+    ratethresh_Hz = minrateatDELTApeak+(ratethresh.*DELTAraterange);
 
-    DELTAbox=bwmorph(ratemat_byDELTAmag<ratethresh,'close');
+    DELTAbox=bwmorph(ratemat_byDELTAmag<ratethresh_Hz,'close');
     DELTAbox=bwmorph(DELTAbox,'open');
     if sum(DELTAbox(:))== 0
         display('No DOWN around gamma dip.... perhaps adjust rate threshold or pick another channel?')
@@ -544,7 +569,7 @@ function [thresholds,threshfigs] = DetermineThresholds(deltaLFP,gammaLFP,spikes,
     DELTAwinthresh = mean(DELTAwinthresh);
     end
     
-    GAMMAbox=bwmorph(ratemat_byGAMMAmag<ratethresh,'close');
+    GAMMAbox=bwmorph(ratemat_byGAMMAmag<ratethresh_Hz,'close');
     GAMMAbox=bwmorph(GAMMAbox,'open');
     if sum(GAMMAbox(:))== 0   %will have issue here with no dip recordings... bad channel.
         display('No DOWN around gamma dip.... perhaps adjust rate threshold or pick another channel?')
@@ -566,6 +591,7 @@ function [thresholds,threshfigs] = DetermineThresholds(deltaLFP,gammaLFP,spikes,
     thresholds.GAMMAdipthresh = GAMMAdipthresh;
     thresholds.GAMMAwinthresh = GAMMAwinthresh;
     thresholds.ratethresh = ratethresh;
+    thresholds.ratethresh_Hz = ratethresh_Hz;
 
     %%
     figure
