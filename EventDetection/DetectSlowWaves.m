@@ -86,7 +86,7 @@ savefile = fullfile(basePath,[baseName,'.SlowWaves.events.mat']);
 
 if exist(savefile,'file') && ~FORCEREDETECT
     display(['Slow Oscillation already Detected, loading ',baseName,'.SlowWave.states.mat'])
-    SlowWaves = bz_LoadStates(basePath,'SlowWave');
+    SlowWaves = bz_LoadEvents(basePath,'SlowWaves');
     return
 end
 
@@ -130,8 +130,10 @@ elseif strcmp(SWChann,'autoselect')
     SWChann = AutoChanSelect(CTXChans,basePath,NREMInts);
 elseif strcmp(SWChann,'useold')
     SlowWaves = bz_LoadStates(basePath,'SlowWave');
+    %SlowWaves = bz_LoadEvents(basePath,'SlowWaves'); after running...
     CHANSELECT = SlowWaves.detectorinfo.detectionparms.CHANSELECT;
     SWChann = SlowWaves.detectorinfo.detectionparms.SWchannel;
+    clear SlowWaves
 else
     CHANSELECT = 'userinput';
 end
