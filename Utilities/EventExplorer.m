@@ -24,29 +24,34 @@ baseName = bz_BasenameFromBasepath(basePath);
 %% Select the Events
 %eventsfile = fullfile(basePath,[baseName,'.',eventsname,'.events.mat']);
 
-%events = bz_LoadEvents(eventsname);
-
 if isstring(events) || ischar(events)
     eventsname = events;
-    [events,FO.eventsfilename] = bz_LoadStates(basePath,events);
-    eventstype = 'states';
-
-    switch eventstype
-        case 'states'
-            intnames = [fieldnames(events.ints);fieldnames(events)]; %remove second term here
-            [s,v] = listdlg('PromptString','Which interval type to explore?',...
-                'SelectionMode','single','ListString',intnames);
-            exploreintname = intnames{s};
-            try
-            exploreint = events.ints.(exploreintname);
-            catch
-                exploreint = events.(exploreintname);
-            end
+    [events,FO.eventsfilename] = bz_LoadEvents(basePath,events);
+    eventstype = 'events';
+    
+    if isempty(events)
+        display('no events.mat by that name, trying to find a states.mat')
+        [events,FO.eventsfilename] = bz_LoadStates(basePath,events);
+        eventstype = 'states';
     end
+end
 
-elseif isstruct(events)
-    exploreint = events.timestamps;
-    exploreintname = events.detectorinfo.detectorname;
+switch eventstype
+    case 'events'
+        exploreint = events.timestamps;
+        exploreintname = events.detectorinfo.detectorname;
+
+    case 'states'
+        intnames = [fieldnames(events.ints)]; %remove second term here
+        [s,v] = listdlg('PromptString','Which interval type to explore?',...
+            'SelectionMode','single','ListString',intnames);
+        exploreintname = intnames{s};
+        try
+        exploreint = events.ints.(exploreintname);
+        catch
+            exploreint = events.(exploreintname);
+        end
+
 end
 %% 
 FO.baseName = baseName;
@@ -74,7 +79,7 @@ posvar(4) = posvar(4)-100;
 oldfig = findobj('tag','EventExplorerMaster');
 close(oldfig)
 %Start the figure
-FO.fig = figure('Position', posvar);
+FO.fig = figure('KeyPressFcn', {@KeyDefinitions},'Position', posvar);
 set(FO.fig, 'numbertitle', 'off', 'name', ['Recording: ', FO.baseName,'. Events: ',FO.EventName]);
 set(FO.fig, 'Tag', 'EventExplorerMaster');
 set(FO.fig, 'menubar', 'none');
@@ -89,26 +94,32 @@ set(FO.fig,'WindowButtonDownFcn', {@MouseClick});
 % set(FO.fig, 'CloseRequestFcn', {@CloseDialog});
 % set(FO.fig, 'Tag', 'EventExplorerMaster');
 
+FO.currentuseraction = 'none';
+
 %Set up the view window
 FO.viewwin = subplot(3,1,2,'ButtonDownFcn',@MouseClick);
 %Event Selection panel
 
+FO.scaleLFP = 1;
 FO.winsize = 8;
 FO.currevent = 1;
-EventVewPlot(FO)
+FO.viewmode = 'event';
+
+
+%Text of hotkey definitions
 
 %Set up the navigation panel
 FO.NavPanel = uipanel('FontSize',12,...
         'Position',[.65 .20 0.25 0.15]);
 nextbtn = uicontrol('Parent',FO.NavPanel,...
     'Position',[160 70 100 40],'String','->',...
-     'Callback','FO.currevent=FO.currevent+1;EventVewPlot(FO)');
+     'Callback','FO.currevent=FO.currevent+1;guidata(FO.fig, FO);EventVewPlot');
 prevbtn = uicontrol('Parent',FO.NavPanel,...
     'Position',[50 70 100 40],'String','<-',...
-     'Callback','FO.currevent=FO.currevent-1;EventVewPlot(FO)');
+     'Callback','FO.currevent=FO.currevent-1;guidata(FO.fig, FO);EventVewPlot');
  editwinsize  = uicontrol('Parent',FO.NavPanel,'Style','edit',...
     'Position',[130 20 60 25],'String',num2str(FO.winsize),...
-    'Callback','FO.winsize=str2num(editwinsize.String);EventVewPlot(FO)');
+    'Callback','FO.winsize=str2num(editwinsize.String);guidata(FO.fig, FO);EventVewPlot');
 winsizetext = uicontrol('Parent',FO.NavPanel,...
     'Position',[50 10 80 30],'style','text',...
     'string','Window Size (s):','HorizontalAlignment','left'); 
@@ -117,18 +128,19 @@ winsizetext = uicontrol('Parent',FO.NavPanel,...
     
 %Store the data in the figure - do this at the end of each function?
 guidata(FO.fig, FO);
-
+EventVewPlot;
+%uiwait(FO.fig) 
 
 %% THIS IS FOR THE EVENT DETECIONT REVIEW %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %function: DetectionReview(FO)
 %% Select the time windows to look at 
 %User input for this
-numevents = 5; %number of events to look at. determine to maximize sampling or have user input (FO.uinput.field?)
+numwins = 30; %number of windows to look at. determine to maximize sampling or have user input (FO.uinput.field?)
 %Selecting from events:
 %randevents = randsample(FO.EventTimes,numevents);
 %Selecting from random times
-[NREMtime,~,~] = RestrictInts(FO.data.lfp.timestamps,restrictint);
-randevents = randsample(NREMtime,numevents);
+[restrictedtimes,~,~] = RestrictInts(FO.data.lfp.timestamps,restrictint);
+randevents = randsample(restrictedtimes,numwins);
 %Find any events that are within winsize of another event to remove them?
 %Also should look at windows in which no events were detected?  Maybe just
 %random windows in the detectionwin
@@ -145,9 +157,10 @@ closeevents = abs(diff(randevents))<FO.winsize;
 %Store the current user action
 FO.currentuseraction = 'MarkEvents';
 FO.markedevents = []; %clear any previously marked events
+FO.viewmode = 'timepoint';
 guidata(FO.fig, FO); %store the data in the figure
 
-counter = numevents;
+counter = numwins;
 miss=[];hit=[];falsealarm=[];
 lookedatwins = [];
 
@@ -156,10 +169,10 @@ FO.EventPanel = uipanel('Title','Detection Review','FontSize',12,...
         'Position',[.65 .05 0.25 0.3]);
 %Buttons for next loop or finishing
 nextbtn = uicontrol('Parent',FO.EventPanel,...
-    'Position',[160 20 125 40],'String','Next Window (Return)',...
+    'Position',[200 20 125 40],'String','Next Window (Return)',...
           'Callback','uiresume(gcbf)');
 qutbtn = uicontrol('Parent',FO.EventPanel,...
-    'Position',[160 65 125 40],'String','Quit Early (Esc)',...
+    'Position',[200 65 125 40],'String','Quit Early (Esc)',...
          'Callback','QUITLOOP=true;uiresume(gcbf)');
 %Instruction text
 instructtext = uicontrol('Parent',FO.EventPanel,...
@@ -178,7 +191,7 @@ FAtext = uicontrol('Parent',FO.EventPanel,...
     'Position',[25 20 125 15],'style','text',...
     'string','FA: 0','HorizontalAlignment','left');
 countetext = uicontrol('Parent',FO.EventPanel,...
-    'Position',[25 100 125 15],'style','text',...
+    'Position',[25 100 175 15],'style','text',...
     'string',['Windows Remaining: ',num2str(counter)],'HorizontalAlignment','left');
 
 %The Event Review Loop
@@ -186,7 +199,8 @@ QUITLOOP = false;
 while counter>0 && QUITLOOP~=true
     %EventUI(FO)   %function that will run the user interface
     thiseventtime = randevents(counter);  
-    viewinfo = EventVewPlot( FO,thiseventtime);
+    FO.currevent = thiseventtime; guidata(FO.fig, FO);
+    viewinfo = EventVewPlot;
     uiwait(FO.fig)  %Wait here until the user clicks quit or next
     
     lookedatwins = [lookedatwins; viewinfo.thiseventwin];
@@ -246,8 +260,9 @@ if isfield(FO,'eventsfilename')
                 eventsfile.(FO.EventName).EventReview = EEoutput.EventReview;
                 save(FO.eventsfilename,'-struct','eventsfile',FO.EventName,'-append')
             catch
-                display([' Save failed... ',FO.eventsfilename,' may not ',...
-                    'contain a structure titled ',FO.EventName,'.',])
+                warndlg({' Save failed... ',[FO.eventsfilename,' may not ',...
+                    'contain a structure titled ',FO.EventName,'.'],...
+                    'Or you may not have sudo priviliges...?'},'Oh No!')
             end
     end
 end

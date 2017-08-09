@@ -1,5 +1,5 @@
 function [ SlowWaves,VerboseOut ] = DetectSlowWaves( basePath,varargin)
-%[UPDOWNstates] = DetectSlowWaves(basePath) detects neocortical slow
+%[SlowWaves] = DetectSlowWaves(basePath) detects neocortical slow
 %waves using a combination of a positive deflection in the LFP (delta wave)
 %and a dip in gamma power.
 %
@@ -85,7 +85,7 @@ figfolder = fullfile(basePath,'DetectionFigures');
 savefile = fullfile(basePath,[baseName,'.SlowWaves.events.mat']);
 
 if exist(savefile,'file') && ~FORCEREDETECT
-    display(['Slow Oscillation already Detected, loading ',baseName,'.SlowWave.states.mat'])
+    display(['Slow Oscillation already Detected, loading ',baseName,'.SlowWaves.events.mat'])
     SlowWaves = bz_LoadEvents(basePath,'SlowWaves');
     return
 end
@@ -129,8 +129,7 @@ elseif strcmp(SWChann,'autoselect')
     %run SW channel selection routine: subfunction below (AutoChanSelect)
     SWChann = AutoChanSelect(CTXChans,basePath,NREMInts);
 elseif strcmp(SWChann,'useold')
-    SlowWaves = bz_LoadStates(basePath,'SlowWave');
-    %SlowWaves = bz_LoadEvents(basePath,'SlowWaves'); after running...
+    SlowWaves = bz_LoadEvents(basePath,'SlowWaves');
     CHANSELECT = SlowWaves.detectorinfo.detectionparms.CHANSELECT;
     SWChann = SlowWaves.detectorinfo.detectionparms.SWchannel;
     clear SlowWaves
@@ -284,7 +283,7 @@ sampleIDX = lfp.timestamps>=samplewin(1) & lfp.timestamps<=samplewin(2);
 
 ratecolor = makeColorMap([1 1 1],[0.8 0 0],[0 0 0]);
 
-figure
+figure('name',[baseName,' Slow Waves'])
 
     gammafig = copyobj(threshfigs.GAMMArate,gcf);
     subplot(4,2,4,gammafig)
@@ -391,10 +390,10 @@ detectionparms.CHANSELECT = CHANSELECT;
 detectionparms.CTXChans = CTXChans;
 detectionparms.thresholds = thresholds;
 
-SlowWaves.ints.UP = UPints;
-SlowWaves.ints.DOWN = DOWNints;
 SlowWaves.timestamps = SWpeaks;
 SlowWaves.SWpeakmag = SWpeakmag;
+SlowWaves.ints.UP = UPints;
+SlowWaves.ints.DOWN = DOWNints;
 SlowWaves.detectorinfo.detectorname = 'DetectSlowWaves';
 SlowWaves.detectorinfo.detectionparms = detectionparms;
 SlowWaves.detectorinfo.detectiondate = today;
@@ -405,6 +404,8 @@ if SAVEMAT
 end
 
 display('Slow Wave Detection: COMPLETE!')
+
+%Prompt user here to check detection with EventExplorer
 end
 
 
@@ -465,7 +466,7 @@ function usechan = AutoChanSelect(trychans,basePath,NREMInts)
     %% Figure
 
     
-    figure
+    figure('name',[baseName,' Slow Wave Channel Selection'])
     subplot(2,2,1)
         hist(gammaLFPcorr)
         xlabel('Gamma-LFP Correlation')
@@ -628,7 +629,7 @@ function [thresholds,threshfigs] = DetermineThresholds(deltaLFP,gammaLFP,spikes,
     normrate_DELTA = (ratemat_byDELTAmag-minrateatDELTApeak)./DELTAraterange;
     normrate_GAMMA = (ratemat_byGAMMAmag-minrateatDELTApeak)./DELTAraterange;
     
-    figure
+    figure('name',[baseName,' Threshold Detection'])
      threshfigs.DELTArate = subplot(2,2,3);
         imagesc(timebins,DELTAmagbins,normrate_DELTA')
         hold on
