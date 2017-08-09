@@ -395,7 +395,8 @@ SlowWaves.timestamps = SWpeaks;
 SlowWaves.SWpeakmag = SWpeakmag;
 SlowWaves.detectorinfo.detectorname = 'DetectSlowWaves';
 SlowWaves.detectorinfo.detectionparms = detectionparms;
-SlowWaves.detectorinfo.detectiondate = today('datetime');
+SlowWaves.detectorinfo.detectiondate = today;
+SlowWaves.detectorinfo.detectionintervals = NREMInts;
 
 if SAVEMAT
     save(savefile,'SlowWaves')
