@@ -481,7 +481,9 @@ function usechan = AutoChanSelect(trychans,basePath,NREMInts,spikes)
         alllfp.channels(cc) = chanlfp.channels;
         
     end
+
     
+    %%
     [~,usechanIDX] = min(gammaLFPcorr);
     usechan = trychans(usechanIDX);
     
@@ -506,6 +508,11 @@ function usechan = AutoChanSelect(trychans,basePath,NREMInts,spikes)
         plot(alllfp.timestamps,alllfp.data(:,usechanIDX),'k')
         axis tight
         box off
+        
+    subplot(2,2,3)
+    plot(LFPspikecorr,gammaspikecorr,'k.')
+    hold on
+    	plot(LFPspikecorr(usechanIDX),gammaspikecorr(usechanIDX),'ro')
         
     NiceSave('SlowWaveChannelSelect',figfolder,baseName)
 end
