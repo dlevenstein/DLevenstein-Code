@@ -20,8 +20,12 @@ function [ SlowWaves,VerboseOut ] = DetectSlowWaves( basePath,varargin)
 %       .mininterOFF    (default: 0.03s)
 %       .peakdist       (default: 0.05s)
 %       .peakthresh     (default: 2.5 stds - modified Z score)
-%   'ratethresh' -rate threshold (0-1) for determining LFP thresholds
-%                   (default 0.5)
+%   'sensitivity' -sensititivity (0-1) for determining LFP thresholds
+%                   gamma/delta thresholds set at the minimal peak 
+%                   magnitude for which mean-normalized pop rate drops
+%                   below the sensitivity value
+%                   lower sensitivity will result in fewer False Positives,
+%                   but more Missed slow waves. (default 0.5)
 %   'SHOWFIG'   -true/false show a quality control figure (default: true)
 %   'saveMat'   -logical (default=true) to save in buzcode format
 %   'forceReload' -logical (default: false) to redetect (add option to use
@@ -53,7 +57,7 @@ addParameter(p,'showFig',true,@islogical);
 addParameter(p,'SWChan',[]);
 addParameter(p,'NREMInts',[]);
 addParameter(p,'CTXChans','all');
-addParameter(p,'ratethresh',0.5,ratevalidation);
+addParameter(p,'sensitivity',0.5,ratevalidation);
 parse(p,varargin{:})
 
 FORCEREDETECT = p.Results.forceReload;
@@ -62,7 +66,7 @@ SHOWFIG = p.Results.showFig;
 SWChann = p.Results.SWChan;
 NREMInts = p.Results.NREMInts;
 CTXChans = p.Results.CTXChans;
-ratethresh = p.Results.ratethresh;
+ratethresh = p.Results.sensitivity;
 
 
 %Defaults
@@ -77,7 +81,7 @@ end
 % GAMMAwinthresh = 1;
 
 minwindur = 0.04;
-joinwindur = 0.005;
+joinwindur = 0.01;
 
 %% File Management
 baseName = bz_BasenameFromBasepath(basePath);
@@ -146,13 +150,13 @@ allspikes = sort(cat(1,spikes.times{:}));
 
 %% Filter the LFP: delta
 display('Filtering LFP')
-deltafilterbounds = [0.5 8]; %heuristically defined.  room for improvement here.
+deltafilterbounds = [0.5 6]; %heuristically defined.  room for improvement here.
 deltaLFP = bz_Filter(lfp,'passband',deltafilterbounds,'filter','fir1','order',1);
 deltaLFP.normamp = NormToInt(deltaLFP.data,'modZ',NREMInts,deltaLFP.samplingRate);
 
 %% Filter and get power of the LFP: gamma
 gammafilter = [100 inf]; %high pass >80Hz (previously (>100Hz)
-gammasmoothwin = 0.06; %window for smoothing gamma power %0.08 is ok...
+gammasmoothwin = 0.08; %window for smoothing gamma power %0.08 is ok...
 gammaLFP = bz_Filter(lfp,'passband',gammafilter,'filter','fir1','order',4);
 gammaLFP.smoothamp = smooth(gammaLFP.amp,round(gammasmoothwin.*gammaLFP.samplingRate),'moving' );
 gammaLFP.normamp = NormToInt(gammaLFP.smoothamp,'modZ',NREMInts,gammaLFP.samplingRate);
@@ -416,7 +420,7 @@ end
 
 
 %% Channel Selection Functions
-function usechan = AutoChanSelect(trychans,basePath,NREMInts)
+function usechan = AutoChanSelect(trychans,basePath,NREMInts,spikes)
     display('Detecting best channel for slow wave detection...')
     baseName = bz_BasenameFromBasepath(basePath);
     figfolder = fullfile(basePath,'DetectionFigures');
@@ -429,7 +433,20 @@ function usechan = AutoChanSelect(trychans,basePath,NREMInts)
     	trychans = setdiff(trychans,par.badchannels);
     end
     
+    %Calculate binned spike rate for correlation with gamma/anticorrelation
+    %with LFP
+    dt = 0.005; %dt = 5ms
+    overlap = 8; %Overlap = 8 dt
+    winsize = dt*overlap; %meaning windows are 40ms big (previously 30)
+    [spikemat,t_spkmat,spindices] = SpktToSpkmat(spikes.times, [], dt,overlap);
+    synchmat = sum(spikemat>0,2);
+    ratemat = sum(spikemat,2);
+    [t_spkmat,inNREMidx] = RestrictInts(t_spkmat,NREMInts);
+    synchmat = synchmat(inNREMidx);
+    
+  %%  
     for cc = 1:length(trychans)
+
         display(['Trying Channel ',num2str(cc),' of ',num2str(length(trychans))])
         %Load the LFPs
         chanlfp = bz_GetLFP(trychans(cc),'basepath',basePath);
@@ -443,9 +460,16 @@ function usechan = AutoChanSelect(trychans,basePath,NREMInts)
         trygammaLFP.amp = trygammaLFP.amp(inNREMidx,:);
         %Best channel is the one in which gamma is most anticorrelated with the
         %LFP - i.e. DOWN states (positive LFP) have low gamma power
-    
+        
         gammaLFPcorr(cc) = corr(single(chanlfp.data),trygammaLFP.amp,'type','spearman');
         
+        %Find LFP at rate time points and calculate correlation
+        chanlfp.ratetimes = interp1(chanlfp.timestamps,single(chanlfp.data),t_spkmat,'nearest');
+        trygammaLFP.ratetimes = interp1(chanlfp.timestamps,trygammaLFP.amp,t_spkmat,'nearest');
+        LFPspikecorr(cc) = corr(chanlfp.ratetimes,synchmat,'type','spearman');
+        gammaspikecorr(cc) = corr(trygammaLFP.ratetimes,synchmat,'type','spearman');
+        
+       
         %Save a small window for plotting
         if ~exist('samplewin','var')
             winsize = 4; %s
@@ -455,6 +479,7 @@ function usechan = AutoChanSelect(trychans,basePath,NREMInts)
         end
         alllfp.data(:,cc) = chanlfp.data(sampleIDX);
         alllfp.channels(cc) = chanlfp.channels;
+        
     end
     
     [~,usechanIDX] = min(gammaLFPcorr);
