@@ -58,6 +58,14 @@ FO.baseName = baseName;
 FO.EventTimes = exploreint;
 FO.EventName = eventsname;
 FO.basePath = basePath;
+
+%FAs and Misses if DetectionReview has already been run
+REVIEWDONE = false;
+if isfield(events,'EventReview')
+    REVIEWDONE=true;
+    FO.EventReview.miss = events.EventReview.miss;
+    FO.EventReview.falsealarm = events.EventReview.falsealarm;
+end
 %% Make the EventExplorer Figure
 %EE_Initiate( FO )
 usechans = events.detectorinfo.detectionparms.SWchannel;
@@ -113,17 +121,25 @@ FO.NavPanel = uipanel('FontSize',12,...
         'Position',[.65 .20 0.25 0.15]);
 nextbtn = uicontrol('Parent',FO.NavPanel,...
     'Position',[160 70 100 40],'String','->',...
-     'Callback','FO.currevent=FO.currevent+1;guidata(FO.fig, FO);EventVewPlot');
+     'Callback',@NextEvent);
 prevbtn = uicontrol('Parent',FO.NavPanel,...
     'Position',[50 70 100 40],'String','<-',...
-     'Callback','FO.currevent=FO.currevent-1;guidata(FO.fig, FO);EventVewPlot');
- editwinsize  = uicontrol('Parent',FO.NavPanel,'Style','edit',...
-    'Position',[130 20 60 25],'String',num2str(FO.winsize),...
-    'Callback','FO.winsize=str2num(editwinsize.String);guidata(FO.fig, FO);EventVewPlot');
+     'Callback',@PrevEvent);
+editwinsize  = uicontrol('Parent',FO.NavPanel,'Style','edit',...
+    'Position',[170 20 60 25],'String',num2str(FO.winsize),...
+    'Callback',@EditWinSize);
 winsizetext = uicontrol('Parent',FO.NavPanel,...
-    'Position',[50 10 80 30],'style','text',...
+    'Position',[50 10 120 30],'style','text',...
     'string','Window Size (s):','HorizontalAlignment','left'); 
 
+if REVIEWDONE
+    uibuttongroup(something,...
+        'Position',[275,20,200,400],...
+        'SelectionChangedFcn',@(bg,event) EventTypeSelector(bg,event));
+    
+end
+
+    
 %Process selection panel (i.e. event detection, other?)
     
 %Store the data in the figure - do this at the end of each function?
@@ -132,142 +148,27 @@ EventVewPlot;
 %uiwait(FO.fig) 
 
 %[ EventReview ] = DetectionReview( )
-%% THIS IS FOR THE EVENT DETECIONT REVIEW %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% %function: DetectionReview(FO)
-% %% Select the time windows to look at 
-% %User input for this
-% numwins = 30; %number of windows to look at. determine to maximize sampling or have user input (FO.uinput.field?)
-% %Selecting from events:
-% %randevents = randsample(FO.EventTimes,numevents);
-% %Selecting from random times
-% [restrictedtimes,~,~] = RestrictInts(FO.data.lfp.timestamps,restrictint);
-% randevents = randsample(restrictedtimes,numwins);
-% %Find any events that are within winsize of another event to remove them?
-% %Also should look at windows in which no events were detected?  Maybe just
-% %random windows in the detectionwin
-% closeevents = abs(diff(randevents))<FO.winsize;
-% % numtries =0;
-% % while any(closeevents) && numtries<50
-% %     randevents(closeevents)
-% % end
-% %Problem:overlapping ints
-% %[ ints ] = MergeSeparatedInts( ints,minseparation )
-% 
-% 
-% %%
-% %Store the current user action
-% FO.currentuseraction = 'MarkEvents';
-% FO.markedevents = []; %clear any previously marked events
-% FO.viewmode = 'timepoint';
-% guidata(FO.fig, FO); %store the data in the figure
-% 
-% counter = numwins;
-% miss=[];hit=[];falsealarm=[];
-% lookedatwins = [];
-% 
-% %UI panel for event review
-% FO.EventPanel = uipanel('Title','Detection Review','FontSize',12,...
-%         'Position',[.65 .05 0.25 0.3]);
-% %Buttons for next loop or finishing
-% nextbtn = uicontrol('Parent',FO.EventPanel,...
-%     'Position',[200 20 125 40],'String','Next Window (Return)',...
-%           'Callback','uiresume(gcbf)');
-% qutbtn = uicontrol('Parent',FO.EventPanel,...
-%     'Position',[200 65 125 40],'String','Quit Early (Esc)',...
-%          'Callback','QUITLOOP=true;uiresume(gcbf)');
-% %Instruction text
-% instructtext = uicontrol('Parent',FO.EventPanel,...
-%     'Position',[25 100 400 100],'style','text',...
-%     'string',{'Instructions:',...
-%     '   - LEFT click missed events (o)','   - RIGHT click False Alarms (x)'},...
-%     'HorizontalAlignment','left'); 
-% %Display counter text
-% correcttext = uicontrol('Parent',FO.EventPanel,...
-%     'Position',[25 60 125 15],'style','text',...
-%     'string','Correct: 0','HorizontalAlignment','left'); 
-% misstext = uicontrol('Parent',FO.EventPanel,...
-%     'Position',[25 40 125 15],'style','text',...
-%     'string','Miss: 0','HorizontalAlignment','left');
-% FAtext = uicontrol('Parent',FO.EventPanel,...
-%     'Position',[25 20 125 15],'style','text',...
-%     'string','FA: 0','HorizontalAlignment','left');
-% countetext = uicontrol('Parent',FO.EventPanel,...
-%     'Position',[25 100 175 15],'style','text',...
-%     'string',['Windows Remaining: ',num2str(counter)],'HorizontalAlignment','left');
-% 
-% %The Event Review Loop
-% QUITLOOP = false;
-% while counter>0 && QUITLOOP~=true
-%     %EventUI(FO)   %function that will run the user interface
-%     thiseventtime = randevents(counter);  
-%     FO.currevent = thiseventtime; guidata(FO.fig, FO);
-%     viewinfo = EventVewPlot;
-%     uiwait(FO.fig)  %Wait here until the user clicks quit or next
-%     
-%     lookedatwins = [lookedatwins; viewinfo.thiseventwin];
-%     inwinevents = viewinfo.inwinevents;
-%     
-%     
-%     %Tally the user selections for that window
-%     obj = findobj('tag','EventExplorerMaster');  FO = guidata(obj);
-%     if ~isempty(FO.markedevents)
-%         miss = [miss; FO.markedevents(FO.markedevents(:,3)==1,1)];
-%         %This is messy to account for interp errors with 0-1 reference points
-%         if isempty(FO.markedevents(FO.markedevents(:,3)==3,1))
-%             newfalsealarms = [];
-%         elseif length(FO.markedevents(FO.markedevents(:,3)==3,1))==1 && length(inwinevents)==1
-%             newfalsealarms = inwinevents;
-%         else
-%         newfalsealarms = interp1(inwinevents,inwinevents,FO.markedevents(FO.markedevents(:,3)==3,1),'nearest');
-%         end
-%         falsealarm = [falsealarm; newfalsealarms];
-%     end
-%     hit = [hit; inwinevents(~ismember(inwinevents,falsealarm))];
-%     FO.markedevents = [];  guidata(FO.fig, FO); %reset the marked events
-%     
-%     counter = counter-1;
-%     set(correcttext, 'String',['Correct: ',num2str(length(hit))]);
-%     set(misstext, 'String', ['Miss: ',num2str(length(miss))]);
-%     set(FAtext, 'String', ['FA: ',num2str(length(falsealarm))]);
-%     set(countetext, 'String', ['Windows Remaining: ',num2str(counter)]);
-% end
-% %Calculate total number of miss,hit,FA
-% numMiss = length(miss);
-% numHit = length(hit);
-% numFA = length(falsealarm);    
-% 
-% %Calculate total amount of time/percentage of detection time (detectionintervals) looked at
-% 
-% %Put things in the output structure
-% EEoutput.EventReview.lookedatwins = lookedatwins;
-% EEoutput.EventReview.miss = miss; 
-% EEoutput.EventReview.hit = hit;
-% EEoutput.EventReview.falsealarm = falsealarm;
-% EEoutput.EventReview.estMissperc = numMiss./(numHit+numMiss);
-% EEoutput.EventReview.estFAperc = numFA./(numHit+numFA);
-% EEoutput.EventReview.ReviewDate = today;
-% EEoutput.EventReview.EventsType = FO.EventName;
-% 
-% %UI: Done!  Would you like to save the results to (eventsfilename?)
-% %Make function that does this: SaveResults(FO,EEoutput)
-% if isfield(FO,'eventsfilename')
-%     button = questdlg(['Event Review Complete! Would you like to add the results to ',...
-%         FO.eventsfilename,'?'],'Good Job!');
-%     switch button
-%         case 'Yes'
-%             %Load the events file, add the field, save the events file
-%             try %Only do this if the correct named structure lives in the file
-%                 eventsfile = load(FO.eventsfilename,FO.EventName);
-%                 eventsfile.(FO.EventName).EventReview = EEoutput.EventReview;
-%                 save(FO.eventsfilename,'-struct','eventsfile',FO.EventName,'-append')
-%             catch
-%                 warndlg({' Save failed... ',[FO.eventsfilename,' may not ',...
-%                     'contain a structure titled ',FO.EventName,'.'],...
-%                     'Or you may not have sudo priviliges...?'},'Oh No!')
-%             end
-%     end
-% end
-%%
-close(FO.fig)
+
+end %Gen function end.
+
+
+function NextEvent(hObject,eventdata)
+    FO = guidata(hObject); 
+    FO.currevent=FO.currevent+1;
+    guidata(FO.fig, FO);
+    EventVewPlot;
 end
 
+function PrevEvent(hObject,eventdata)
+    FO = guidata(hObject); 
+    FO.currevent=FO.currevent-1;
+    guidata(FO.fig, FO);
+    EventVewPlot;
+end
+
+function EditWinSize(hObject,eventdata)
+    FO = guidata(hObject);
+    FO.winsize=str2num(hObject.String);
+    guidata(FO.fig, FO);
+    EventVewPlot;
+end
