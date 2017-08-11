@@ -9,8 +9,8 @@ function [ EEoutput ] = EventExplorer(events,basePath )
 %
 %DLevenstein 2017
 %%
-%eventsname = 'SlowWave';
-%basePath = '/Users/dlevenstein/Dropbox/Research/Datasets/20140526_277um';
+events = 'SlowWaves';
+basePath = '/Users/dlevenstein/Dropbox/Research/Datasets/20140526_277um';
 %%
 if ~exist('basePath','var')
     basePath = pwd;
@@ -65,6 +65,8 @@ if isfield(events,'EventReview')
     REVIEWDONE=true;
     FO.EventReview.miss = events.EventReview.miss;
     FO.EventReview.falsealarm = events.EventReview.falsealarm;
+    FO.EventReview.miss(isnan(FO.EventReview.miss))=[];
+    FO.EventReview.falsealarm(isnan(FO.EventReview.falsealarm))=[];
 end
 %% Make the EventExplorer Figure
 %EE_Initiate( FO )
@@ -118,7 +120,7 @@ FO.viewmode = 'event';
 
 %Set up the navigation panel
 FO.NavPanel = uipanel('FontSize',12,...
-        'Position',[.65 .20 0.25 0.15]);
+        'Position',[.65 .15 0.25 0.2]);
 nextbtn = uicontrol('Parent',FO.NavPanel,...
     'Position',[160 70 100 40],'String','->',...
      'Callback',@NextEvent);
@@ -133,10 +135,22 @@ winsizetext = uicontrol('Parent',FO.NavPanel,...
     'string','Window Size (s):','HorizontalAlignment','left'); 
 
 if REVIEWDONE
-    uibuttongroup(something,...
-        'Position',[275,20,200,400],...
+    FO.eventtypeselection = uibuttongroup('Position',[0.1,0.1,0.1,0.15],'Visible','on',...
         'SelectionChangedFcn',@(bg,event) EventTypeSelector(bg,event));
     
+    r1 = uicontrol(FO.eventtypeselection,'Style',...
+                      'radiobutton',...
+                      'String','event',...
+                      'Position',[10 70 75 30]);
+
+    r2 = uicontrol(FO.eventtypeselection,'Style','radiobutton',...
+                      'String','misses',...
+                      'Position',[10 40 75 30]);
+
+    r3 = uicontrol(FO.eventtypeselection,'Style','radiobutton',...
+                      'String','FAs',...
+                      'Position',[10 10 75 30]);
+
 end
 
     
@@ -169,6 +183,15 @@ end
 function EditWinSize(hObject,eventdata)
     FO = guidata(hObject);
     FO.winsize=str2num(hObject.String);
+    guidata(FO.fig, FO);
+    EventVewPlot;
+end
+
+function EventTypeSelector(source,event)
+    FO = guidata(source);
+    FO.viewmode = event.NewValue.String;
+    FO.currevent = 1;
+
     guidata(FO.fig, FO);
     EventVewPlot;
 end

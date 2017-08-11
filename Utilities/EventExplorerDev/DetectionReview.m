@@ -79,6 +79,7 @@ while counter>0 && QUITLOOP~=true
     %Tally the user selections for that window
     obj = findobj('tag','EventExplorerMaster');  FO = guidata(obj);
     if ~isempty(FO.markedevents)
+        FO.markedevents(isnan(FO.markedevents(:,1)))=[]; %remove nans - bug fix
         miss = [miss; FO.markedevents(FO.markedevents(:,3)==1,1)];
         %This is messy to account for interp errors with 0-1 reference points
         if isempty(FO.markedevents(FO.markedevents(:,3)==3,1))
