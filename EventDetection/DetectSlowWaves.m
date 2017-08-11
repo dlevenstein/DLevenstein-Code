@@ -155,7 +155,7 @@ deltaLFP = bz_Filter(lfp,'passband',deltafilterbounds,'filter','fir1','order',1)
 deltaLFP.normamp = NormToInt(deltaLFP.data,'modZ',NREMInts,deltaLFP.samplingRate);
 
 %% Filter and get power of the LFP: gamma
-gammafilter = [100 inf]; %high pass >80Hz (previously (>100Hz)
+gammafilter = [100 512]; %high pass >80Hz (previously (>100Hz)
 gammasmoothwin = 0.08; %window for smoothing gamma power %0.08 is ok...
 gammaLFP = bz_Filter(lfp,'passband',gammafilter,'filter','fir1','order',4);
 gammaLFP.smoothamp = smooth(gammaLFP.amp,round(gammasmoothwin.*gammaLFP.samplingRate),'moving' );
@@ -451,22 +451,23 @@ function usechan = AutoChanSelect(trychans,basePath,NREMInts,spikes)
         %Load the LFPs
         chanlfp = bz_GetLFP(trychans(cc),'basepath',basePath);
         %Filter in gamma
-        gammafilter = [100 inf];
-        trygammaLFP = bz_Filter(chanlfp,'passband',gammafilter,'filter','fir1','order',4);
+        gammafilter = [100 512];
+        trygammaLFP = bz_Filter(chanlfp,'passband',gammafilter,'order',4);
 
         %Restrict to NREM only - could also use intervals above to do this....
         [chanlfp.timestamps,inNREMidx] = RestrictInts(chanlfp.timestamps,NREMInts);
         chanlfp.data = chanlfp.data(inNREMidx,:);
         trygammaLFP.amp = trygammaLFP.amp(inNREMidx,:);
         %Best channel is the one in which gamma is most anticorrelated with the
-        %LFP - i.e. DOWN states (positive LFP) have low gamma power
+        %lowpass LFP - i.e. DOWN states (positive LFP) have low gamma power
+        lowpassLFP = bz_Filter(chanlfp,'passband',[0 6],'order',2);
         
-        gammaLFPcorr(cc) = corr(single(chanlfp.data),trygammaLFP.amp,'type','spearman');
+        gammaLFPcorr(cc) = corr(lowpassLFP.data,trygammaLFP.amp,'type','spearman');
         
         %Find LFP at rate time points and calculate correlation
-        chanlfp.ratetimes = interp1(chanlfp.timestamps,single(chanlfp.data),t_spkmat,'nearest');
-        trygammaLFP.ratetimes = interp1(chanlfp.timestamps,trygammaLFP.amp,t_spkmat,'nearest');
-        LFPspikecorr(cc) = corr(chanlfp.ratetimes,synchmat,'type','spearman');
+        lowpasslfp.ratetimes = interp1(lowpassLFP.timestamps,lowpassLFP.data,t_spkmat,'nearest');
+        trygammaLFP.ratetimes = interp1(lowpassLFP.timestamps,trygammaLFP.amp,t_spkmat,'nearest');
+        lowpassspikecorr(cc) = corr(lowpasslfp.ratetimes,synchmat,'type','spearman');
         gammaspikecorr(cc) = corr(trygammaLFP.ratetimes,synchmat,'type','spearman');
         
        
@@ -510,9 +511,10 @@ function usechan = AutoChanSelect(trychans,basePath,NREMInts,spikes)
         box off
         
     subplot(2,2,3)
-    plot(LFPspikecorr,gammaspikecorr,'k.')
+    plot(lowpassspikecorr,gammaspikecorr,'k.')
     hold on
-    	plot(LFPspikecorr(usechanIDX),gammaspikecorr(usechanIDX),'ro')
+    	plot(lowpassspikecorr(usechanIDX),gammaspikecorr(usechanIDX),'ro')
+        xlabel('Spike-Delta Correlation');ylabel('Spike-Gamma Power Correlation')
         
     NiceSave('SlowWaveChannelSelect',figfolder,baseName)
 end
@@ -705,6 +707,7 @@ function [thresholds,threshfigs] = DetermineThresholds(deltaLFP,gammaLFP,spikes,
         xlabel('t (relative to GA Dip)');ylabel({'GA Dip Amplitude', '(modZ)'})
         colorbar
         xlim([-0.7 0.7])
-
+        
 end
-    
+
+

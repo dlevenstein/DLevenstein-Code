@@ -1,8 +1,12 @@
-function [x,y,u,v] = MeanVelocityFromPosition(xpos,ypos,int,sf)
+function [x,y,u,v,numpoints] = MeanVelocityFromPosition(xpos,ypos,int,sf)
 %UNTITLED3 Summary of this function goes here
 %   Detailed explanation goes here
 %
+%To plot, use quiver(x,y,u,v)
 %
+%Note, this only works if xpos, ypos have been 'pre-binned'. i.e. a small
+%number of distinct x,y values
+
 %TO DO:
 %   -Include confidence.... variability in velocity etc?
 %%
@@ -31,7 +35,7 @@ ypos = ypos(1:end-1);
 tlen = length(xpos);
 
 
-if exist('int','var')
+if exist('int','var') && ~isempty(int)
     if exist('sf','var')
         int = int*sf;
         int(:,1) = floor(int(:,1))+1;
@@ -52,6 +56,7 @@ x = [];
 y = [];
 u = [];
 v = [];
+numpoints = [];
 xvals = unique(xpos);
 yvals = unique(ypos);
 for xind = 1:length(xvals)
@@ -66,6 +71,8 @@ for xind = 1:length(xvals)
         meandy = mean(dy(xpos==xx & ypos==yy));
         u = [u meandx];
         v = [v meandy];
+        
+        numpoints = [numpoints sum(xpos==xx & ypos==yy)];
     end
 end
 
