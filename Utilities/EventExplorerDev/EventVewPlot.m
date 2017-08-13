@@ -7,7 +7,7 @@ obj = findobj('tag','EventExplorerMaster');  FO = guidata(obj);
 switch FO.viewmode
     case 'timepoint'
         timepoint = FO.currevent;
-    case 'event'
+    case 'events'
         timepoint = FO.EventTimes(FO.currevent);
     case 'FAs'
         timepoint = FO.EventReview.falsealarm(FO.currevent);
@@ -32,6 +32,23 @@ plot(FO.viewwin,inwinevents,zeros(size(inwinevents)),'o','color',[0 0.6 0])
 %Passthrough info from the plot
 viewinfo.inwinevents = inwinevents;
 viewinfo.thiseventwin = thiseventwin;
+
+
+%Update Comment/Flag Window to reflect current event
+%these try statements are to deal with FlagsAndComments not being made yet (do better)
+try iscommented = ~isempty(FO.FlagsAndComments.(FO.viewmode).comments{FO.currevent});
+catch; iscommented=false; end
+if iscommented 
+    set(FO.eventcomment,'String',FO.FlagsAndComments.(FO.viewmode).comments{FO.currevent})
+else set(FO.eventcomment,'String','Event Comments')
+end
+
+try isflagged = ismember(FO.currevent,FO.FlagsAndComments.(FO.viewmode).flags);
+catch; isflagged = false; end
+if isflagged
+    set(FO.flageventbutton,'String','Unflag')
+else set(FO.flageventbutton,'String','Flag')
+end
 
 end
 

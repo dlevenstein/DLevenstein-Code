@@ -113,7 +113,7 @@ FO.viewwin = subplot(3,1,2,'ButtonDownFcn',@MouseClick);
 FO.scaleLFP = 1;
 FO.winsize = 8;
 FO.currevent = 1;
-FO.viewmode = 'event';
+FO.viewmode = 'events';
 
 
 %Text of hotkey definitions
@@ -122,11 +122,14 @@ FO.viewmode = 'event';
 FO.NavPanel = uipanel('FontSize',12,...
         'Position',[.65 .15 0.25 0.2]);
 nextbtn = uicontrol('Parent',FO.NavPanel,...
-    'Position',[160 70 100 40],'String','->',...
+    'Position',[110 70 60 40],'String','->',...
      'Callback',@NextEvent);
 prevbtn = uicontrol('Parent',FO.NavPanel,...
-    'Position',[50 70 100 40],'String','<-',...
+    'Position',[40 70 60 40],'String','<-',...
      'Callback',@PrevEvent);
+randbtn = uicontrol('Parent',FO.NavPanel,...
+    'Position',[200 70 100 40],'String','Random',...
+     'Callback',@RandEvent);
 editwinsize  = uicontrol('Parent',FO.NavPanel,'Style','edit',...
     'Position',[170 20 60 25],'String',num2str(FO.winsize),...
     'Callback',@EditWinSize);
@@ -134,13 +137,14 @@ winsizetext = uicontrol('Parent',FO.NavPanel,...
     'Position',[50 10 120 30],'style','text',...
     'string','Window Size (s):','HorizontalAlignment','left'); 
 
+%The Reviewed Event Selection Panel
 if REVIEWDONE
-    FO.eventtypeselection = uibuttongroup('Position',[0.1,0.1,0.1,0.15],'Visible','on',...
+    FO.eventtypeselection = uibuttongroup('Position',[0.1,0.7,0.1,0.15],'Visible','on',...
         'SelectionChangedFcn',@(bg,event) EventTypeSelector(bg,event));
     
     r1 = uicontrol(FO.eventtypeselection,'Style',...
                       'radiobutton',...
-                      'String','event',...
+                      'String','events',...
                       'Position',[10 70 75 30]);
 
     r2 = uicontrol(FO.eventtypeselection,'Style','radiobutton',...
@@ -153,6 +157,24 @@ if REVIEWDONE
 
 end
 
+%The Comment/Flag Panel
+FO.showflagged = 'false';  %state of the Flagged Only checker
+FO.CommentFlagPanel = uipanel('FontSize',12,...
+        'Position',[.1 .05 0.5 0.3]);
+FO.flageventbutton = uicontrol('Parent',FO.CommentFlagPanel,...
+    'Position',[550 20 100 40],'String','Flag',...
+     'Callback',@FlagEvent);
+ 
+FO.eventcomment = uicontrol('Parent',FO.CommentFlagPanel,...
+    'Style','edit','Max',5,'String','Event Comments',...
+    'HorizontalAlignment','left','Position',[20 60 630 160],...
+    'Callback',@AddUserComment);
+flaggedonly = uicontrol('Parent',FO.CommentFlagPanel,'Style','checkbox',...
+    'Position',[450 20 20 40],...
+    'Callback',@ShowFlagged)
+showflagtext = uicontrol('Parent',FO.CommentFlagPanel,...
+    'Position',[470 20 80 30],'style','text',...
+    'string','Browse Flagged Events Only','HorizontalAlignment','left'); 
     
 %Process selection panel (i.e. event detection, other?)
     
@@ -166,31 +188,99 @@ EventVewPlot;
 end %Gen function end.
 
 
-function NextEvent(hObject,eventdata)
-    FO = guidata(hObject); 
-    FO.currevent=FO.currevent+1;
+function NextEvent(obj,eventdata)
+    FO = guidata(obj); 
+    switch FO.showflagged
+        case true
+            flaggedevents = FO.FlagsAndComments.(FO.viewmode).flags;
+            %find the closest previous flagged event
+            eventidx = interp1([0 flaggedevents],0:length(flaggedevents),...
+                FO.currevent,'previous'); %set the current event to the closest previous flagged event
+            FO.currevent = flaggedevents(eventidx+1); %next flagged event
+        otherwise
+            FO.currevent=FO.currevent+1;
+    end
     guidata(FO.fig, FO);
     EventVewPlot;
 end
 
-function PrevEvent(hObject,eventdata)
-    FO = guidata(hObject); 
-    FO.currevent=max(FO.currevent-1,0);
+function PrevEvent(obj,eventdata)
+    FO = guidata(obj); 
+    switch FO.showflagged
+        case true
+            flaggedevents = FO.FlagsAndComments.(FO.viewmode).flags;
+            %find the closest previous flagged event
+            eventidx = interp1([flaggedevents max([flaggedevents(end) FO.currevent])+1],...
+                1:length(flaggedevents)+1,...
+                FO.currevent,'next'); %set the current event to the closest next flagged event
+            FO.currevent = flaggedevents(eventidx-1); %previous flagged event
+        otherwise
+            FO.currevent=max(FO.currevent-1,1);
+    end
     guidata(FO.fig, FO);
     EventVewPlot;
 end
 
-function EditWinSize(hObject,eventdata)
-    FO = guidata(hObject);
-    FO.winsize=str2num(hObject.String);
+function RandEvent(obj,eventdata)
+    FO = guidata(obj);
+    switch FO.viewmode
+        case 'events'
+            FO.currevent=randi(length(FO.EventTimes));
+        otherwise
+            display(['Random does not yet work for viewmode "',FO.viewmode,'"'])
+    end
     guidata(FO.fig, FO);
     EventVewPlot;
 end
 
-function EventTypeSelector(source,event)
-    FO = guidata(source);
+function EditWinSize(obj,eventdata)
+    FO = guidata(obj);
+    FO.winsize=str2num(obj.String);
+    guidata(FO.fig, FO);
+    EventVewPlot;
+end
+
+function EventTypeSelector(obj,event)
+    FO = guidata(obj);
     FO.viewmode = event.NewValue.String;
     FO.currevent = 1;
     guidata(FO.fig, FO);
     EventVewPlot;
+end
+
+function FlagEvent(obj,event)
+    FO = guidata(obj); 
+    try  %This is to deal with case where FO.FlagsAndComments.(FO.viewmode).flags hasn't been made yet... do better
+        [isflagged,flagidx] = ismember(FO.currevent,FO.FlagsAndComments.(FO.viewmode).flags);
+        switch isflagged
+            case true
+                FO.currevent,FO.FlagsAndComments.(FO.viewmode).flags(flagidx)=[];
+                set(FO.flageventbutton,'String','Flag')
+            case false
+                FO.FlagsAndComments.(FO.viewmode).flags(end+1) = FO.currevent;
+                set(FO.flageventbutton,'String','Unflag')
+        end
+    catch %If flags haven't yet been added to FO for this viewmode
+        FO.FlagsAndComments.(FO.viewmode).flags = FO.currevent;
+        set(FO.flageventbutton,'String','Unflag')
+    end
+    FO.FlagsAndComments.(FO.viewmode).flags = sort(FO.FlagsAndComments.(FO.viewmode).flags);
+    guidata(FO.fig, FO);
+end
+
+function AddUserComment(obj,event)
+    FO = guidata(obj);
+    usercomment = get(obj,'String');
+    FO.FlagsAndComments.(FO.viewmode).comments{FO.currevent} = usercomment;
+    guidata(FO.fig, FO);
+end
+
+function ShowFlagged(obj,event) 
+    FO = guidata(obj);
+    if (get(obj,'Value') == get(obj,'Max'))
+        FO.showflagged = true;
+    else
+        FO.showflagged = false;
+    end
+    guidata(FO.fig, FO);
 end
