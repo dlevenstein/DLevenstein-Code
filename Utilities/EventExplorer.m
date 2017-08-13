@@ -175,7 +175,7 @@ end
 
 function PrevEvent(hObject,eventdata)
     FO = guidata(hObject); 
-    FO.currevent=FO.currevent-1;
+    FO.currevent=max(FO.currevent-1,0);
     guidata(FO.fig, FO);
     EventVewPlot;
 end
@@ -191,7 +191,6 @@ function EventTypeSelector(source,event)
     FO = guidata(source);
     FO.viewmode = event.NewValue.String;
     FO.currevent = 1;
-
     guidata(FO.fig, FO);
     EventVewPlot;
 end
