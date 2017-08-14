@@ -1,14 +1,18 @@
 function [ EventReview ] = DetectionReview(obj,event )
 %UNTITLED Summary of this function goes here
 %   Detailed explanation goes here
-obj = findobj('tag','EventExplorerMaster');  FO = guidata(obj); 
+%obj = findobj('tag','EventExplorerMaster');  
+FO = guidata(obj); 
 %% Select the time windows to look at 
 %User input for this
-numwins = 30; %number of windows to look at. determine to maximize sampling or have user input (FO.uinput.field?)
+numwins = 5; %number of windows to look at. determine to maximize sampling or have user input (FO.uinput.field?)
 %Selecting from events:
 %randevents = randsample(FO.EventTimes,numevents);
-%Selecting from random times
-[restrictedtimes,~,~] = RestrictInts(FO.data.lfp.timestamps,restrictint);
+%Selecting from random times (RestrictInts takes way too long...)
+set(findobj(FO.fig,'Type','uicontrol'),'Enable','off');
+drawnow;
+[restrictedtimes,~,~] = RestrictInts(FO.data.lfp.timestamps,FO.detectionints);
+set(findobj(FO.fig,'Type','uicontrol'),'Enable','on');
 randevents = randsample(restrictedtimes,numwins);
 %Find any events that are within winsize of another event to remove them?
 %Also should look at windows in which no events were detected?  Maybe just
@@ -35,13 +39,13 @@ lookedatwins = [];
 
 %UI panel for event review
 FO.EventPanel = uipanel('Title','Detection Review','FontSize',12,...
-        'Position',[.65 .05 0.25 0.3]);
+        'Position',[.65 .05 0.25 0.32]);
 %Buttons for next loop or finishing
 nextbtn = uicontrol('Parent',FO.EventPanel,...
-    'Position',[200 20 125 40],'String','Next Window (Return)',...
+    'Position',[200 20 150 40],'String','Next Window (Return)',...
           'Callback','uiresume(gcbf)');
 qutbtn = uicontrol('Parent',FO.EventPanel,...
-    'Position',[200 65 125 40],'String','Quit Early (Esc)',...
+    'Position',[200 65 150 40],'String','Quit Early (Esc)',...
          'Callback','QUITLOOP=true;uiresume(gcbf)');
 %Instruction text
 instructtext = uicontrol('Parent',FO.EventPanel,...
@@ -108,14 +112,14 @@ numFA = length(falsealarm);
 %Calculate total amount of time/percentage of detection time (detectionintervals) looked at
 
 %Put things in the output structure
-EEoutput.EventReview.lookedatwins = lookedatwins;
-EEoutput.EventReview.miss = miss; 
-EEoutput.EventReview.hit = hit;
-EEoutput.EventReview.falsealarm = falsealarm;
-EEoutput.EventReview.estMissperc = numMiss./(numHit+numMiss);
-EEoutput.EventReview.estFAperc = numFA./(numHit+numFA);
-EEoutput.EventReview.ReviewDate = today;
-EEoutput.EventReview.EventsType = FO.EventName;
+EventReview.lookedatwins = lookedatwins;
+EventReview.miss = miss; 
+EventReview.hit = hit;
+EventReview.falsealarm = falsealarm;
+EventReview.estMissperc = numMiss./(numHit+numMiss);
+EventReview.estFAperc = numFA./(numHit+numFA);
+EventReview.ReviewDate = today;
+EventReview.EventsType = FO.EventName;
 
 %UI: Done!  Would you like to save the results to (eventsfilename?)
 %Make function that does this: SaveResults(FO,EEoutput)
@@ -127,7 +131,7 @@ if isfield(FO,'eventsfilename')
             %Load the events file, add the field, save the events file
             try %Only do this if the correct named structure lives in the file
                 eventsfile = load(FO.eventsfilename,FO.EventName);
-                eventsfile.(FO.EventName).EventReview = EEoutput.EventReview;
+                eventsfile.(FO.EventName).EventReview = EventReview;
                 save(FO.eventsfilename,'-struct','eventsfile',FO.EventName,'-append')
             catch
                 warndlg({' Save failed... ',[FO.eventsfilename,' may not ',...
@@ -137,5 +141,12 @@ if isfield(FO,'eventsfilename')
     end
 end
 
+%% Return to explorer mode
+FO.viewmode = 'events';
+FO.currentuseraction = 'none';
+FO.currevent = 1;
+set(FO.EventPanel,'Visible','off')
+FO.EventReview = EventReview;
+guidata(FO.fig, FO); %Save the detection review back to GUI data
 end
 

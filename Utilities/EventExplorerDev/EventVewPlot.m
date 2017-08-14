@@ -50,5 +50,15 @@ if isflagged
 else set(FO.flageventbutton,'String','Flag')
 end
 
+% set(0,'currentfigure',FO.fig); %These is supposed to fix the post-button resize bug... 
+% set(FO.fig,'currentaxes',FO.viewwin); %but do not. sad.
+% figure(FO.fig)
+% set(gcf,'CurrentObject',gcf)
+%This is a terrible fix to the figure focus problem that slows down window
+%switching. sad. only necessary if focus has been moved away from current
+%figure
+set(findobj(FO.fig,'Type','uicontrol'),'Enable','off');
+drawnow;
+set(findobj(FO.fig,'Type','uicontrol'),'Enable','on');
 end
 

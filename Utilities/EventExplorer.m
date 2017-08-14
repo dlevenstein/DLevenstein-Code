@@ -63,21 +63,27 @@ FO.basePath = basePath;
 REVIEWDONE = false;
 if isfield(events,'EventReview')
     REVIEWDONE=true;
-    FO.EventReview.miss = events.EventReview.miss;
-    FO.EventReview.falsealarm = events.EventReview.falsealarm;
-    FO.EventReview.miss(isnan(FO.EventReview.miss))=[];
-    FO.EventReview.falsealarm(isnan(FO.EventReview.falsealarm))=[];
+    FO.EventReview = events.EventReview;
+%     FO.EventReview.miss = events.EventReview.miss;
+%     FO.EventReview.falsealarm = events.EventReview.falsealarm;
+%     FO.EventReview.miss(isnan(FO.EventReview.miss))=[];
+%     FO.EventReview.falsealarm(isnan(FO.EventReview.falsealarm))=[];
 end
-%% Make the EventExplorer Figure
+%% Load The Data, eh?
 %EE_Initiate( FO )
-usechans = events.detectorinfo.detectionparms.SWchannel;
+try
+    FO.detectionints = events.detectorinfo.detectionintervals;
+    FO.detectionchannel = events.detectorinfo.detectionchannel;
+catch
+    display('No DetectionChannel/Intervals found in events.mat... using NREM and SWchannel for now')
 [ SleepState ] = bz_LoadStates(FO.basePath,'SleepState');
-restrictint = SleepState.ints.NREMstate;
-%lfp = bz_GetLFP(usechans,'basepath',FO.basePath,'intervals',restrictint);
-FO.data.lfp = bz_GetLFP(usechans,'basepath',FO.basePath);
-FO.data.spikes = bz_GetSpikes('basepath',FO.basePath);
-%%
+FO.detectionints = SleepState.ints.NREMstate;
+FO.detectionchannel = events.detectorinfo.detectionparms.SWchannel;
+end
 
+FO.data.lfp = bz_GetLFP(FO.detectionchannel,'basepath',FO.basePath);
+FO.data.spikes = bz_GetSpikes('basepath',FO.basePath);
+%% Set up the EventExplorer Window
 %Position for the main interface
 posvar = get(0,'Screensize');
 posvar(1) = 20;
@@ -85,24 +91,17 @@ posvar(2) = 20;
 posvar(3) = posvar(3)-100;
 posvar(4) = posvar(4)-100;
 
-%Old figure should be closed
-oldfig = findobj('tag','EventExplorerMaster');
-close(oldfig)
+oldfig = findobj('tag','EventExplorerMaster'); close(oldfig);
 %Start the figure
 FO.fig = figure('KeyPressFcn', {@KeyDefinitions},'Position', posvar);
 set(FO.fig, 'numbertitle', 'off', 'name', ['Recording: ', FO.baseName,'. Events: ',FO.EventName]);
-set(FO.fig, 'Tag', 'EventExplorerMaster');
-set(FO.fig, 'menubar', 'none');
+set(FO.fig, 'Tag', 'EventExplorerMaster','menubar', 'none');
 %set(FO.fig, 'CloseRequestFcn', {@CloseDialog}); The close function
 set(FO.fig,'WindowButtonDownFcn', {@MouseClick});
 
-%From StateEditor
-% FO.fig = figure('KeyReleaseFcn', {@DefKey}, 'Position', posvar);
-% set(FO.fig, 'numbertitle', 'off', 'name', ['Event: ', FO.baseName]);
+%From StateEditor - anything else here needed?
 % set(FO.fig,'WindowButtonDownFcn', {@MouseClick}, 'WindowButtonUpFcn', {@unMouseClick}, 'Units', 'normalized');
 % set(FO.fig, 'WindowButtonMotionFcn', {@Nothing}, 'WindowScrollWheelFcn', {@MouseScroll});
-% set(FO.fig, 'CloseRequestFcn', {@CloseDialog});
-% set(FO.fig, 'Tag', 'EventExplorerMaster');
 
 FO.currentuseraction = 'none';
 
@@ -116,7 +115,7 @@ FO.currevent = 1;
 FO.viewmode = 'events';
 
 
-%Text of hotkey definitions
+%Text of hotkey definitions for user guidance
 
 %Set up the navigation panel
 FO.NavPanel = uipanel('FontSize',12,...
@@ -174,23 +173,36 @@ FO.CommentFlagPanel = uipanel('FontSize',12,...
         'HorizontalAlignment','left','Position',[20 60 630 160],...
         'Callback',@AddUserComment);
     flaggedonly = uicontrol('Parent',FO.CommentFlagPanel,'Style','checkbox',...
-        'Position',[450 20 20 40],...
+        'Position',[430 20 20 40],...
         'Callback',@ShowFlagged)
     showflagtext = uicontrol('Parent',FO.CommentFlagPanel,...
-        'Position',[470 20 80 30],'style','text',...
+        'Position',[450 20 100 30],'style','text',...
         'string','Browse Flagged Events Only','HorizontalAlignment','left'); 
-    
-%Process selection panel (i.e. event detection, other?)
-    
+        
 %Store the data in the figure - do this at the end of each function?
 guidata(FO.fig, FO);
 EventVewPlot;
-%uiwait(FO.fig) 
+end %Gen function end. Below are callback definitions
 
-%[ EventReview ] = DetectionReview( )
+%% %%%%%%%%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% CALLBACKS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% %%%%%%%%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
 
-end %Gen function end.
-
+function KeyDefinitions(f, e)
+    obj = findobj('tag','EventExplorerMaster');  FO = guidata(obj); 
+    switch e.Key
+        case 'uparrow'
+            FO.scaleLFP = FO.scaleLFP+0.1;
+            guidata(FO.fig, FO); 
+            EventVewPlot;
+        case 'downarrow'
+            FO.scaleLFP = FO.scaleLFP-0.1;
+            guidata(FO.fig, FO); 
+            EventVewPlot;
+        case 'rightarrow';  NextEvent(obj);
+        case 'leftarrow';   PrevEvent(obj)
+    end
+end
 
 function NextEvent(obj,eventdata)
     FO = guidata(obj); 

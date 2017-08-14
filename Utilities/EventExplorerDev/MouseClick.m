@@ -5,6 +5,7 @@ function MouseClick(e, src)
     mousepoint = get(gcf, 'CurrentPoint');
     clicktype = get(gcf, 'SelectionType');
     clickcoords = get(gca, 'CurrentPoint');clickcoords = clickcoords(1,1:2);
+
     
     %Determine what the click does as a function of current action
     switch FO.currentuseraction
@@ -30,5 +31,10 @@ function MouseClick(e, src)
                       
     end
     
+    
+        set(0,'currentfigure',FO.fig); %This is supposed to fix the post-button resize bug... 
+    set(FO.fig,'currentaxes',FO.viewwin); %but does not. sad.
     guidata(FO.fig, FO); %write any new data to the object
+    figure(FO.fig)
+
 end

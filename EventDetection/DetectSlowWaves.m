@@ -389,7 +389,6 @@ end
 
 %% Ouput in .event.mat format
 %Needs to be updated
-detectionparms.SWchannel = SWChann;
 detectionparms.CHANSELECT = CHANSELECT;
 detectionparms.CTXChans = CTXChans;
 detectionparms.thresholds = thresholds;
@@ -402,6 +401,7 @@ SlowWaves.detectorinfo.detectorname = 'DetectSlowWaves';
 SlowWaves.detectorinfo.detectionparms = detectionparms;
 SlowWaves.detectorinfo.detectiondate = today;
 SlowWaves.detectorinfo.detectionintervals = NREMInts;
+SlowWaves.detectorinfo.detectionchannel = SWChann;
 
 if SAVEMAT
     save(savefile,'SlowWaves')
