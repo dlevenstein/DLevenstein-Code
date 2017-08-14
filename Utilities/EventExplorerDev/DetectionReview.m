@@ -1,4 +1,4 @@
-function [ EventReview ] = DetectionReview( )
+function [ EventReview ] = DetectionReview(obj,event )
 %UNTITLED Summary of this function goes here
 %   Detailed explanation goes here
 obj = findobj('tag','EventExplorerMaster');  FO = guidata(obj); 
