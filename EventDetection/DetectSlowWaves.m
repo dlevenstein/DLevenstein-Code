@@ -89,6 +89,10 @@ if exist(savefile,'file') && ~FORCEREDETECT
     return
 end
 %% Collect all the Necessary Pieces of Information
+%Spikes in the CTX Spike Groups
+spikes = bz_GetSpikes('basepath',basePath,'region','CTX');
+allspikes = sort(cat(1,spikes.times{:}));
+
 %Sleep Scoring (for NREM)
 [SleepState] = bz_LoadStates(basePath,'SleepState');
 if isempty(SleepState) && isempty(NREMInts)
@@ -124,7 +128,7 @@ elseif strcmp(SWChann,'manualselect')
 elseif strcmp(SWChann,'autoselect')
     CHANSELECT = 'auto';
     %run SW channel selection routine: subfunction below (AutoChanSelect)
-    SWChann = AutoChanSelect(CTXChans,basePath,NREMInts);
+    SWChann = AutoChanSelect(CTXChans,basePath,NREMInts,spikes);
 elseif strcmp(SWChann,'useold')
     SlowWaves = bz_LoadEvents(basePath,'SlowWaves');
     CHANSELECT = SlowWaves.detectorinfo.detectionparms.CHANSELECT;
@@ -139,21 +143,19 @@ else
 end
 lfp = bz_GetLFP(SWChann,'basepath',basePath);
 
-%Spikes in the CTX Spike Groups
-spikes = bz_GetSpikes('basepath',basePath,'region','CTX');
-allspikes = sort(cat(1,spikes.times{:}));
+
 %assumes region 'CTX'.... update this maybe putting in local region 
 %spikegroups is the better way to go
 
 %% Filter the LFP: delta
 display('Filtering LFP')
-deltafilterbounds = [0.5 6]; %heuristically defined.  room for improvement here.
+deltafilterbounds = [0.5 8]; %heuristically defined.  room for improvement here.
 deltaLFP = bz_Filter(lfp,'passband',deltafilterbounds,'filter','fir1','order',1);
 deltaLFP.normamp = NormToInt(deltaLFP.data,'modZ',NREMInts,deltaLFP.samplingRate);
 
 %% Filter and get power of the LFP: gamma
 gammafilter = [100 400]; %high pass >80Hz (previously (>100Hz)
-gammasmoothwin = 0.1; %window for smoothing gamma power %0.08 is ok...
+gammasmoothwin = 0.08; %window for smoothing gamma power %0.08 is ok... (switch back to 0.08?)
 gammaLFP = bz_Filter(lfp,'passband',gammafilter,'filter','fir1','order',4);
 gammaLFP.smoothamp = smooth(gammaLFP.amp,round(gammasmoothwin.*gammaLFP.samplingRate),'moving' );
 gammaLFP.normamp = NormToInt(gammaLFP.smoothamp,'modZ',NREMInts,gammaLFP.samplingRate);
@@ -414,7 +416,7 @@ function usechan = AutoChanSelect(trychans,basePath,NREMInts,spikes)
     [spikemat,t_spkmat,spindices] = SpktToSpkmat(spikes.times, [], dt,overlap);
     synchmat = sum(spikemat>0,2);
     ratemat = sum(spikemat,2);
-    [t_spkmat,inNREMidx] = RestrictInts(t_spkmat,NREMInts);
+    [t_spkmat,inNREMidx] = RestrictInts(t_spkmat,NREMInts); %Replace with InInterval
     synchmat = synchmat(inNREMidx);
     
   %%  
@@ -458,12 +460,14 @@ function usechan = AutoChanSelect(trychans,basePath,NREMInts,spikes)
 
     
     %%
-    [~,usechanIDX] = min(gammaLFPcorr);
+    %[~,usechanIDX] = min(gammaLFPcorr);
+    [~,usechanIDX] = min(lowpassspikecorr.*gammaspikecorr);
     usechan = trychans(usechanIDX);
     
     display(['Selected Channel: ',num2str(usechan)])
     
-    [~,sortcorr] = sort(gammaLFPcorr);
+    %[~,sortcorr] = sort(gammaLFPcorr);
+    [~,sortcorr] = sort(lowpassspikecorr.*gammaspikecorr);
     %% Figure
 
     

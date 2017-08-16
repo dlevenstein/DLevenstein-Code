@@ -13,7 +13,7 @@ function [normdata,intmean,intstd] = NormToInt(data,normtype,int,sf,varargin)
 %see https://ibm.co/2qi4Vy5
 %
 %DLevenstein Summer 2016
-%TO DO: Improve input parsing
+%TO DO: Improve input parsing, compadible with buzcode structures
 %%
 SHOWFIG = false;
 
@@ -65,7 +65,7 @@ switch normtype
         intmean = intmedian;
         intstd = intMAD;
     otherwise
-        display('normtype should be ''Z'' or ''mean''')
+        display('incorrect normtype')
 end
 
 %%
