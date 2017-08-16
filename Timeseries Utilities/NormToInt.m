@@ -41,6 +41,8 @@ int_data = [];
 for ii = 1:numints
     int_data = [int_data; data(int(ii,1):int(ii,2),:)];
 end
+%Instead turn non-int data to nan and take mean, can then use movmean etc
+%for moving stuff...
 
 intmean = nanmean(int_data);
 intstd = nanstd(int_data);
