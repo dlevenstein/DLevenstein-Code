@@ -19,7 +19,7 @@ function [ newints,mergedidx ] = MergeSeparatedInts( ints,minseparation )
 % ints = [0 3;2 4; 6 10; 10.5 13;  20 30; 19 21];
 % minseparation = 0.5;
 
-%ints = [0 10; 11 19; 9 20; 25 27; 26 28];   %BUG!
+%ints = [0 10; 11 19; 9 20; 25 27; 26 28];   %BUG! (squished)
 
 %%
 %Sort Ints by their end times so all intervals end before the
@@ -50,12 +50,9 @@ for s = flipud(smallsep)'   %Go backwards from last ints to first ones
 end
 
 
-%Test for further merges needed - bug fix for case with two non-overlapping
-%intervals subsumed in a larger interval. Like follows:
-% ------
-%          --------
-%     ---------------
-
+if any(newints(2:end,1)-newints(1:end-1,2)<=0) %This bug shouldn't exist anymore
+    error('Merge Error... why?')
+end
 
 end
 
