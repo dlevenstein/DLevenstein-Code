@@ -16,8 +16,15 @@ function [normdata,intmean,intstd] = NormToInt(data,normtype,int,sf,varargin)
 %TO DO: Improve input parsing, compadible with buzcode structures
 %%
 SHOWFIG = false;
-
-
+p = inputParser;
+addParameter(p,'moving',0,@isnumeric);
+parse(p,varargin{:})
+movingwin = p.Results.moving;
+if movingwin>0
+    MOVING = true;
+else
+    MOVING = false;
+end
 %%
 if ~exist('int','var') || isempty(int)
     int = [1 size(data,1)];
@@ -34,27 +41,52 @@ if ~exist('sf','var')|| isempty(sf)
 end
 
 
-int = round(int*sf);
+int = round(int*sf); %Convert intervals from seconds to indices 
 int(int==0)=1; %Turn time=0 to the first indexed datapoint
 
-int_data = [];
+%Make vector that is nans at times not in the intervals
+int_data = nan(size(data));
 for ii = 1:numints
-    int_data = [int_data; data(int(ii,1):int(ii,2),:)];
-end
-%Instead turn non-int data to nan and take mean, can then use movmean etc
-%for moving stuff...
+    int_data(int(ii,1):int(ii,2),:) = data(int(ii,1):int(ii,2),:);
+end 
 
-intmean = nanmean(int_data);
-intstd = nanstd(int_data);
+switch MOVING
+    case false        
+        switch normtype
+            case {'Z','mean'}
+                intmean = nanmean(int_data,1);
+                intstd = nanstd(int_data,0,1);
+                intmeanlong = repmat(intmean,length(data(:,1)),1);
+                intstdlong = repmat(intstd,length(data(:,1)),1);
+            case 'modZ'
+                intmedian = nanmedian(int_data);
+                intMAD = mad(int_data,[],1);
+                intmedianlong = repmat(intmedian,length(data(:,1)),1);
+                intMADlong = repmat(intMAD,length(data(:,1)),1);
+        end
+    case true
+        switch normtype
+            case {'Z','mean'}
+                intmean = movmean(int_data,movingwin.*sf,1,'omitnan');
+                intstd = movstd(int_data,movingwin.*sf,'omitnan');
+                %Because moving mean will have overhangs out of int
+                intmean(isnan(int_data))=nan; intstd(isnan(int_data))=nan; 
+                intmeanlong = intmean; intstdlong = intstd;
 
-intmedian = median(int_data);
-intMAD = mad(int_data,1);
+            case 'modZ'
+                intmedian = movmedian(int_data,movingwin.*sf,1,'omitnan');
+                intMAD = movmad(int_data,movingwin.*sf,'omitnan');
+                intmedian(isnan(int_data))=nan; intMAD(isnan(int_data))=nan; 
+                intmedianlong = intmedian; intMADlong = intMAD;
+
+        end
+end        
 
 switch normtype
     case 'Z'
-        normdata = (data-repmat(intmean,length(data(:,1)),1))./repmat(intstd,length(data(:,1)),1);
+        normdata = (data-intmeanlong)./intstdlong;
     case 'mean'
-        normdata = bsxfun(@(X,Y) X./Y,data,intmean);
+        normdata = data./intmeanlong;
     case 'max'
         colmax = max(int_data,[],1);
         normdata = bsxfun(@(X,Y) X./Y,data,colmax);
@@ -63,12 +95,13 @@ switch normtype
         percentiles = linspace(0,1,length(sortdata));
         normdata = interp1(sortdata,percentiles,data,'nearest');
     case 'modZ'
-        normdata = 0.6745*(data-repmat(intmedian,length(data(:,1)),1))./repmat(intMAD,length(data(:,1)),1);
+        normdata = 0.6745*(data-intmedianlong)./intMADlong;
         intmean = intmedian;
         intstd = intMAD;
     otherwise
         display('incorrect normtype')
 end
+
 
 %%
 if SHOWFIG

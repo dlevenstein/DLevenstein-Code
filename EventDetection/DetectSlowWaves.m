@@ -71,11 +71,17 @@ CTXChans = p.Results.CTXChans;
 NOPROMPTS = p.Results.noPrompts;
 ratethresh = p.Results.sensitivity;
 
-
 %Defaults
 if ~exist('basePath','var')
     basePath = pwd;
 end
+
+%Put this as optional input... with option to only use delta/gamma, for
+%comparing quality
+filterparms.deltafilter = [0.5 8];%heuristically defined.  room for improvement here.
+filterparms.gammafilter = [100 400]; %high pass >80Hz (previously (>100Hz)
+filterparms.gammasmoothwin = 0.08; %window for smoothing gamma power %0.08 is ok... (switch back to 0.08?)
+filterparms.gammanormwin = 20; %window for gamma normalization (s)
 
 minwindur = 0.04;
 joinwindur = 0.01;
@@ -89,7 +95,7 @@ if exist(savefile,'file') && ~FORCEREDETECT
     return
 end
 %% Collect all the Necessary Pieces of Information
-%Spikes in the CTX Spike Groups
+%Spikes in the CTX Spike Groups - assumes region ('CTX')
 spikes = bz_GetSpikes('basepath',basePath,'region','CTX');
 allspikes = sort(cat(1,spikes.times{:}));
 
@@ -143,22 +149,16 @@ else
 end
 lfp = bz_GetLFP(SWChann,'basepath',basePath);
 
-
-%assumes region 'CTX'.... update this maybe putting in local region 
-%spikegroups is the better way to go
-
 %% Filter the LFP: delta
 display('Filtering LFP')
-deltafilterbounds = [0.5 8]; %heuristically defined.  room for improvement here.
-deltaLFP = bz_Filter(lfp,'passband',deltafilterbounds,'filter','fir1','order',1);
+deltaLFP = bz_Filter(lfp,'passband',filterparms.deltafilter,'filter','fir1','order',1);
 deltaLFP.normamp = NormToInt(deltaLFP.data,'modZ',NREMInts,deltaLFP.samplingRate);
 
 %% Filter and get power of the LFP: gamma
-gammafilter = [100 400]; %high pass >80Hz (previously (>100Hz)
-gammasmoothwin = 0.08; %window for smoothing gamma power %0.08 is ok... (switch back to 0.08?)
-gammaLFP = bz_Filter(lfp,'passband',gammafilter,'filter','fir1','order',4);
-gammaLFP.smoothamp = smooth(gammaLFP.amp,round(gammasmoothwin.*gammaLFP.samplingRate),'moving' );
-gammaLFP.normamp = NormToInt(gammaLFP.smoothamp,'modZ',NREMInts,gammaLFP.samplingRate);
+
+gammaLFP = bz_Filter(lfp,'passband',filterparms.gammafilter,'filter','fir1','order',4);
+gammaLFP.smoothamp = smooth(gammaLFP.amp,round(filterparms.gammasmoothwin.*gammaLFP.samplingRate),'moving' );
+gammaLFP.normamp = NormToInt(gammaLFP.smoothamp,'modZ',NREMInts,gammaLFP.samplingRate,'moving',filterparms.gammanormwin);
 
 %% Determine Thresholds and find windows around delta peaks/gamma dips
 [thresholds,threshfigs] = DetermineThresholds(deltaLFP,gammaLFP,spikes,NREMInts,ratethresh,basePath);
@@ -360,6 +360,7 @@ end
 detectionparms.CHANSELECT = CHANSELECT;
 detectionparms.CTXChans = CTXChans;
 detectionparms.thresholds = thresholds;
+detectionparms.filterparms = filterparms;
 
 SlowWaves.timestamps = SWpeaks;
 SlowWaves.SWpeakmag = SWpeakmag;
@@ -563,7 +564,7 @@ function [thresholds,threshfigs] = DetermineThresholds(deltaLFP,gammaLFP,spikes,
     else
         sampleGAMMA = 1:length(GAMMAdips);
     end
-    GAMMAmagbins = linspace(min(GAMMAdipdepth),min([max(GAMMAdipdepth)-0.5,4]),nummagbins);
+    GAMMAmagbins = linspace(min(GAMMAdipdepth),min([max(GAMMAdipdepth)-0.5,2.5]),nummagbins);
     neardipgamma = zeros(2.*win.*gammaLFP.samplingRate+1,nummagbins);
     for pp = 1:length(sampleGAMMA)
         ss = sampleGAMMA(pp);
@@ -572,9 +573,9 @@ function [thresholds,threshfigs] = DetermineThresholds(deltaLFP,gammaLFP,spikes,
         reltime = [reltime; allspikes(nearpeakspikes)-GAMMAdips(ss)];
         spkpeakheight = [spkpeakheight; GAMMAdipdepth(ss).*ones(sum(nearpeakspikes),1)];
          %Gamma around the gamma
-        [~,groupidx] = min(abs(GAMMAdipdepth(ss)-GAMMAmagbins));
-        neardipgamma(:,groupidx) =neardipgamma(:,groupidx) + ...
-            gammaLFP.normamp(GAMMAdipIDX(ss)+[-1.*gammaLFP.samplingRate:gammaLFP.samplingRate]);
+        [~,groupidx] = min(abs(GAMMAdipdepth(ss)-GAMMAmagbins)); %Which gamma power bin
+        neardipgamma(:,groupidx) =nansum([neardipgamma(:,groupidx), ... %nans for non-NREM from window smoothing
+            gammaLFP.normamp(GAMMAdipIDX(ss)+[-1.*gammaLFP.samplingRate:gammaLFP.samplingRate])],2);
     end
     peakmagdist = hist(GAMMAdipdepth(sampleGAMMA),GAMMAmagbins);
     spikehitmat = hist3([reltime,spkpeakheight],{timebins,GAMMAmagbins});
