@@ -25,7 +25,7 @@ function [ SlowWaves,VerboseOut ] = DetectSlowWaves( basePath,varargin)
 %                   magnitude for which mean-normalized pop rate drops
 %                   below the sensitivity value
 %                   lower sensitivity will result in fewer False Positives,
-%                   but more Missed slow waves. (default 0.5)
+%                   but more Missed slow waves. (default 0.6)
 %   'showFig'   -true/false show a quality control figure (default: true)
 %   'saveMat'   -logical (default=true) to save in buzcode format
 %   'forceReload' -logical (default: false) to redetect (add option to use
@@ -43,11 +43,8 @@ function [ SlowWaves,VerboseOut ] = DetectSlowWaves( basePath,varargin)
 %
 %DLevenstein 2016/2017
 %TO DO
-%-finish commenting and input parsing...
 %-incorporate multiple channels for detection of slow wave, which is robust
 %on all (deep) lfp channels in the local cortical population
-%-incorporate the drop in gamma power (a la Watson et al 2016). especially
-%useful for recordings with low cell count
 %% Defaults and Parms
 ratevalidation = @(x) x>0 & x<1;
 
@@ -58,7 +55,7 @@ addParameter(p,'showFig',true,@islogical);
 addParameter(p,'SWChan',[]);
 addParameter(p,'NREMInts',[]);
 addParameter(p,'CTXChans','all');
-addParameter(p,'sensitivity',0.5,ratevalidation);
+addParameter(p,'sensitivity',0.6,ratevalidation);
 addParameter(p,'noPrompts',false,@islogical);
 parse(p,varargin{:})
 
