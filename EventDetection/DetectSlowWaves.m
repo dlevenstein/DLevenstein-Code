@@ -80,7 +80,7 @@ end
 %comparing quality
 filterparms.deltafilter = [0.5 8];%heuristically defined.  room for improvement here.
 filterparms.gammafilter = [100 400]; %high pass >80Hz (previously (>100Hz)
-filterparms.gammasmoothwin = 0.08; %window for smoothing gamma power %0.08 is ok... (switch back to 0.08?)
+filterparms.gammasmoothwin = 0.08; %window for smoothing gamma power (s)
 filterparms.gammanormwin = 20; %window for gamma normalization (s)
 
 minwindur = 0.04;
@@ -152,7 +152,7 @@ lfp = bz_GetLFP(SWChann,'basepath',basePath);
 %% Filter the LFP: delta
 display('Filtering LFP')
 deltaLFP = bz_Filter(lfp,'passband',filterparms.deltafilter,'filter','fir1','order',1);
-deltaLFP.normamp = NormToInt(deltaLFP.data,'modZ',NREMInts,deltaLFP.samplingRate);
+deltaLFP.normamp = NormToInt(deltaLFP.data,'modZ',NREMInts,deltaLFP.samplingRate,'moving');
 
 %% Filter and get power of the LFP: gamma
 
@@ -547,8 +547,8 @@ function [thresholds,threshfigs] = DetermineThresholds(deltaLFP,gammaLFP,spikes,
         spkpeakheight = [spkpeakheight; DELTAPeakheight(ss).*ones(sum(nearpeakspikes),1)];
         %Delta around the delta
         [~,groupidx] = min(abs(DELTAPeakheight(ss)-DELTAmagbins));
-        nearpeakdelta(:,groupidx) =nearpeakdelta(:,groupidx) + ...
-            deltaLFP.normamp(DELTApeakIDX(ss)+[-1.*deltaLFP.samplingRate:deltaLFP.samplingRate]);
+        nearpeakdelta(:,groupidx) =nansum([nearpeakdelta(:,groupidx), ...
+            deltaLFP.normamp(DELTApeakIDX(ss)+[-1.*deltaLFP.samplingRate:deltaLFP.samplingRate])],2);
     end
     peakmagdist = hist(DELTAPeakheight(sampleDELTA),DELTAmagbins);
     spikehitmat = hist3([reltime,spkpeakheight],{timebins,DELTAmagbins});
