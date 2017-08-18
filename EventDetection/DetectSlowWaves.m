@@ -15,17 +15,17 @@ function [ SlowWaves,VerboseOut ] = DetectSlowWaves( basePath,varargin)
 %               (Default: use SWChannel from sleep scoring)
 %   'CTXSpkGroups' -Spike groups that are in the cortex...  default: all
 %   'CTXChans' -LFP channels that are in the cortex...  default: all
-%   'detectionparms' -Structure of detection parameters (needs update)
-%       .minOFF         (default: 0.025s)
-%       .mininterOFF    (default: 0.03s)
-%       .peakdist       (default: 0.05s)
-%       .peakthresh     (default: 2.5 stds - modified Z score)
 %   'sensitivity' -sensititivity (0-1) for determining LFP thresholds
 %                   gamma/delta thresholds set at the minimal peak 
 %                   magnitude for which mean-normalized pop rate drops
 %                   below the sensitivity value
 %                   lower sensitivity will result in fewer False Positives,
 %                   but more Missed slow waves. (default 0.6)
+%   'filterparms' structure with fields
+%           .deltafilter    [low high] bounds (default: [0.5 8]Hz)
+%           .gammafilter    [low high] bounds (default: [100 400]Hz)
+%           .gammasmoothwin  window for smoothing gamma power (default: 0.08 s)
+%           .gammanormwin    window for normalizing gamma power (default: 20s)
 %   'showFig'   -true/false show a quality control figure (default: true)
 %   'saveMat'   -logical (default=true) to save in buzcode format
 %   'forceReload' -logical (default: false) to redetect (add option to use
@@ -45,8 +45,16 @@ function [ SlowWaves,VerboseOut ] = DetectSlowWaves( basePath,varargin)
 %TO DO
 %-incorporate multiple channels for detection of slow wave, which is robust
 %on all (deep) lfp channels in the local cortical population
+%update input parameter list
 %% Defaults and Parms
 ratevalidation = @(x) x>0 & x<1;
+filterparmsvalidate = @(x) isstruct(x) & all(isfield(x,...
+    {'deltafilter','gammafilter','gammasmoothwin','gammanormwin'}));
+
+filterparms.deltafilter = [0.5 8];%heuristically defined.  room for improvement here.
+filterparms.gammafilter = [100 400]; %high pass >80Hz (previously (>100Hz)
+filterparms.gammasmoothwin = 0.08; %window for smoothing gamma power (s)
+filterparms.gammanormwin = 20; %window for gamma normalization (s)
 
 p = inputParser;
 addParameter(p,'forceReload',false,@islogical);
@@ -57,6 +65,7 @@ addParameter(p,'NREMInts',[]);
 addParameter(p,'CTXChans','all');
 addParameter(p,'sensitivity',0.6,ratevalidation);
 addParameter(p,'noPrompts',false,@islogical);
+addParameter(p,'filterparms',filterparms,filterparmsvalidate);
 parse(p,varargin{:})
 
 FORCEREDETECT = p.Results.forceReload;
@@ -67,6 +76,7 @@ NREMInts = p.Results.NREMInts;
 CTXChans = p.Results.CTXChans;
 NOPROMPTS = p.Results.noPrompts;
 ratethresh = p.Results.sensitivity;
+filterparms = p.Results.filterparms;
 
 %Defaults
 if ~exist('basePath','var')
@@ -75,10 +85,7 @@ end
 
 %Put this as optional input... with option to only use delta/gamma, for
 %comparing quality
-filterparms.deltafilter = [0.5 8];%heuristically defined.  room for improvement here.
-filterparms.gammafilter = [100 400]; %high pass >80Hz (previously (>100Hz)
-filterparms.gammasmoothwin = 0.08; %window for smoothing gamma power (s)
-filterparms.gammanormwin = 20; %window for gamma normalization (s)
+
 
 minwindur = 0.04;
 joinwindur = 0.01;
@@ -146,12 +153,10 @@ else
 end
 lfp = bz_GetLFP(SWChann,'basepath',basePath);
 
-%% Filter the LFP: delta
+%% Filter the LFP: delta, gamma
 display('Filtering LFP')
 deltaLFP = bz_Filter(lfp,'passband',filterparms.deltafilter,'filter','fir1','order',1);
-deltaLFP.normamp = NormToInt(deltaLFP.data,'modZ',NREMInts,deltaLFP.samplingRate,'moving');
-
-%% Filter and get power of the LFP: gamma
+deltaLFP.normamp = NormToInt(deltaLFP.data,'modZ',NREMInts,deltaLFP.samplingRate);
 
 gammaLFP = bz_Filter(lfp,'passband',filterparms.gammafilter,'filter','fir1','order',4);
 gammaLFP.smoothamp = smooth(gammaLFP.amp,round(filterparms.gammasmoothwin.*gammaLFP.samplingRate),'moving' );
