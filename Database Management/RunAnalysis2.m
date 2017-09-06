@@ -70,6 +70,9 @@ switch selectionmode
     
 end
 
+%How many results are in the analysis function?
+numresults = nargout(analysisfunction);
+
 %% Make a figure folder
 functionpath = which(analysisfunction);
 functionpath = fileparts(functionpath);
@@ -79,7 +82,7 @@ if ~exist(figfolder,'dir')
 end
 
 %% Loop through the recordings and run the analysis
-numresults = nargout(analysisfunction);
+
 numrecs = length(baseName);
 display(['Running Analysis on Recordings (',num2str(numrecs),')'])
 for rr = 1:numrecs
