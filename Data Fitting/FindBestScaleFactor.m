@@ -5,11 +5,18 @@ function [ bestsf,dwelltimes_sim_sf,KSSTAT,selectionparm ] = FindBestScaleFactor
 % dwelltimes_exp = dwelltimes;
 % dwelltimes_sim = dwell;
 % sf_range = [0.0001 0.02];
-EXFIGS = true;
+EXFIGS = false;
 logtransform = true;
 %%
 numsf = 300;
-scalefactors = linspace(sf_range(1),sf_range(2),numsf);
+if length(sf_range)==1
+    scalefactors = sf_range;
+    numsf = 1;
+elseif length(sf_range)==2
+    scalefactors = linspace(sf_range(1),sf_range(2),numsf);
+else
+    error('wrong # scale factors')
+end
 %%
 if any(isnan(dwelltimes_sim.UP)) || any(isnan(dwelltimes_sim.DOWN))
     KSSTAT.DOWN = nan; KSSTAT.UP = nan; selectionparm = nan;

@@ -1,4 +1,4 @@
-function [dwelltimes_sim_sf,dwellfit] = WCadapt_DwellTimeMatch(dwelltimestomatch,simdwelltimes)
+function [dwelltimes_sim_sf,dwellfit] = WCadapt_DwellTimeMatch(dwelltimestomatch,simdwelltimes,scalefactor)
 %[matcheddwelltimes] = WCadapt_DwellTimeMatch(dwelltimestomatch,simdwelltimes)
 %
 %INPUT
@@ -6,9 +6,17 @@ function [dwelltimes_sim_sf,dwellfit] = WCadapt_DwellTimeMatch(dwelltimestomatch
 %       .UP
 %       .DOWN
 %   simdwelltimes
+%   scalefactor (optional) single value or range
 %   
 %%
+if isempty(dwelltimestomatch.UP) || isempty(dwelltimestomatch.DOWN)
+    dwelltimes_sim_sf = [];dwellfit=[];
+    return
+end
 
+if ~exist('scalefactor','var')
+    scalefactor = [0.001 0.025];
+end
 
 numsims = length(simdwelltimes);
 parfor_progress(numsims);
@@ -27,7 +35,7 @@ parfor nn = 1:numsims
     
         [dwellfit(nn).bestsf,dwelltimes_sim_sf(nn),...
             dwellfit(nn).KSSTAT,dwellfit(nn).selectionparm]...
-            = FindBestScaleFactor(dwelltimestomatch,simdwelltimes(nn),[0.001 0.025]);
+            = FindBestScaleFactor(dwelltimestomatch,simdwelltimes(nn),scalefactor);
 end
 
 parfor_progress(0);

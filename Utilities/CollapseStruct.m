@@ -29,6 +29,11 @@ if ~exist('dim','var')
 end
 
 %%
+if ~isstruct(structin)
+    structout=structin;
+    warning('Not a structure...')
+    return
+end
 fields = fieldnames(structin);
 
 %%
