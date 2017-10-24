@@ -7,6 +7,9 @@ function [correlation,signif] = ScatterWithLinFit( x,y,color,varargin )
 
 sig = 'p0';
 corrtype = 'spearman';
+if ~exist('color','var')
+    color = 'k'
+end
 
 
 %%

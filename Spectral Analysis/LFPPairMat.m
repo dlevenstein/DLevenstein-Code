@@ -89,7 +89,7 @@ parse(p,varargin{:})
 %FMA session
 % if FMA && ~exist('DATA','var')
 if exist('basepath','var') && exist('basename','var')
-    SetCurrentSession(fullfile(basepath,basename))
+    SetCurrentSession('basepath',basepath,'basename',basename);
 else
     SetCurrentSession
 end
