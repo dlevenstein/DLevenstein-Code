@@ -1,4 +1,4 @@
-function [int1overlap,int2overlap] = FindOverlappingInts(ints1,ints2)
+function [int1overlap,int2overlap,int2whichint1,int1whichint2] = FindOverlappingInts(ints1,ints2)
 %[int1overlap,int2overlap] = FindOverlappingInts(ints1,ints2) finds
 %intervals in sets ints1 and ints2 that overlap in time. Returns logicals
 %that indicate which intervals in the sets have an interval in the other
@@ -32,6 +32,14 @@ for ii = 1:numints1
     int2overlap = int2overlap|aroundend;
     betweenstartend = all([~beforestart,~afterend],2);
     int2overlap = int2overlap|betweenstartend;
+    
+    %which intervals are the ones that overlap this one?
+    whichoverlap = [find(aroundend) find(aroundstart) find(betweenstartend)];
+    whichoverlap = unique(whichoverlap);
+    if isempty(whichoverlap)
+        whichoverlap = [];
+    end
+    int2whichint1{ii} = whichoverlap;
 end
 
 for ii = 1:numints2
@@ -43,5 +51,14 @@ for ii = 1:numints2
     int1overlap = int1overlap|aroundend;
     betweenstartend = all([~beforestart,~afterend],2);
     int1overlap = int1overlap|betweenstartend;
+    
+    %which intervals are the ones that overlap this one?
+    whichoverlap = [find(aroundend) find(aroundstart) find(betweenstartend)];
+    whichoverlap = unique(whichoverlap);
+    if isempty(whichoverlap)
+        whichoverlap = [];
+    end
+    int1whichint2{ii} = whichoverlap;
 end
+1;
 
