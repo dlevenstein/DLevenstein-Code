@@ -3,6 +3,8 @@ function [ s ] = PoissonRateSpikeBins(r,dt,T)
 %Given a (NNeurons) vector of rates and a time window dt, this function
 %returns a probabilisitically determined spike matrix (1 = spike in time
 %window) for the population.
+%
+%DLevenstein 2017
 %% DEV
 %dt = 0.001;
 %r = [0.1 1 10 100]';

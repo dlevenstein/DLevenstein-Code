@@ -6,6 +6,10 @@ if ~exist('SHOWFIG','var')
     SHOWFIG=false;
 end
 
+if isnan(dwelltimes)
+    parmsHat = [nan nan]; parmsCI = [nan nan]; nloglik= nan;
+    return
+end
 
 %THREE PARM - p0,pinf,tau
 % initalparms = [0 0.5 min(dwelltimes)];
