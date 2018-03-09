@@ -1,5 +1,5 @@
 function [ structout ] = CollapseStruct( structin,dim,combine,NEST )
-%structout = CollapseStruct( structin,dim,combine ) Combines elements in a
+%structout = CollapseStruct( structin,dim,combine,NEST ) Combines elements in a
 %structure array
 %
 %INPUT
@@ -13,6 +13,7 @@ function [ structout ] = CollapseStruct( structin,dim,combine,NEST )
 %   (optional)
 %       combine     can take 'mean' or 'median' instead of concatenating
 %                   or 'std'. default: 'justcat'
+%       NEST        true/false - go into nested structures?
 %
 %       
 %% A place for input options

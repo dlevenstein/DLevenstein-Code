@@ -87,13 +87,13 @@ parfor nn = 1:numsims
 
     %% Calculate Frequency Spectrum
     
-    fspec(nn).freqlist = logspace(-3,1,numfreqs);
-    window = 5000;
-    noverlap = 2500;
-    window = window/dt;
-    noverlap = noverlap/dt;
-    [FFTspec,FFTfreqs,t_FFT] = spectrogram(r,window,noverlap,fspec(nn).freqlist,1/dt);
-    fspec(nn).spec = mean(abs(FFTspec),2)';
+%     fspec(nn).freqlist = logspace(-3,1,numfreqs);
+%     window = 5000;
+%     noverlap = 2500;
+%     window = window/dt;
+%     noverlap = noverlap/dt;
+%     [FFTspec,FFTfreqs,t_FFT] = spectrogram(r,window,noverlap,fspec(nn).freqlist,1/dt);
+%     fspec(nn).spec = mean(abs(FFTspec),2)';
 
 end
 
