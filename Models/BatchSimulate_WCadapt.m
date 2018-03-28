@@ -31,9 +31,9 @@ parms = modelparms;
 simtime = simparms.simtime;
 dt = simparms.dt;
 
-dwelltimes = struct('UP',[],'DOWN',[]);
+dwelltimes = struct('UP',[],'DOWN',[],'DOWNstd',[],'UPstd',[],'DOWNmean',[],'UPmean',[]);
 dwelltimes(numsims)=dwelltimes;
-ratehist = struct('bins',[],'hist',[],'mean',[],'std',[],'thresh',[]);
+ratehist = struct('bins',[],'hist',[],'mean',[],'std',[],'thresh',[],'dip',[],'dip_p',[]);
 ratehist(numsims) = ratehist;
 
 numfreqs = 200;
@@ -45,8 +45,10 @@ tstart = tic;
 %% Loop Simulation
 parfor nn = 1:numsims
 
-    tempstruct_rate = struct('bins',[],'hist',[],'mean',[],'std',[],'thresh',[]); %temporary structure to hold rate distribution
-    tempstruct_dwell = struct('UP',[],'DOWN',[]); %temporary structure to hold dwelltime distribution
+    tempstruct_rate = struct('bins',[],'hist',[],'mean',[],'std',[],...
+        'thresh',[],'dip',[],'dip_p',[]); %temporary structure to hold rate distribution
+    tempstruct_dwell = struct('UP',[],'DOWN',[],...
+        'DOWNstd',[],'UPstd',[],'DOWNmean',[],'UPmean',[]); %temporary structure to hold dwelltime distribution
     
     timespent=toc(tstart);
     percdone = parfor_progress;
@@ -72,7 +74,9 @@ parfor nn = 1:numsims
     tempstruct_rate.std = std(r);
     
     %% Calculate DWELL times
-    [tempstruct_rate.thresh,cross,~] = BimodalThresh(r,'Schmidt');
+    [tempstruct_rate.thresh,cross,~,diptest] = BimodalThresh(r,'Schmidt');
+    tempstruct_rate.dip = diptest.dip;
+    tempstruct_rate.dip_p = diptest.p_value;
     
     if isempty(cross.upints) || length(cross.upints) <=2
         tempstruct_dwell.UP = nan;
@@ -81,6 +85,13 @@ parfor nn = 1:numsims
         tempstruct_dwell.UP = cross.upints(:,2)-cross.upints(:,1);
         tempstruct_dwell.DOWN = cross.downints(:,2)-cross.downints(:,1);
     end
+    
+    %% Dwelltime statistics
+    tempstruct_dwell.UPmean = nanmean(tempstruct_dwell.UP);
+    tempstruct_dwell.DOWNmean = nanmean(tempstruct_dwell.DOWN);
+    
+    tempstruct_dwell.UPstd = nanstd(tempstruct_dwell.UP);
+    tempstruct_dwell.DOWNstd = nanstd(tempstruct_dwell.DOWN);
     
     ratehist(nn) = tempstruct_rate;
     dwelltimes(nn) = tempstruct_dwell;

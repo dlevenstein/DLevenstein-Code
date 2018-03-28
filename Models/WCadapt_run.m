@@ -66,14 +66,17 @@ tspan = [0:dt:simtime]';         %interval of integration
 %Inoise = noiseamp.*wgn(length(tspan),1,0);
 switch parms.samenoise
     case true
-        Inoise = noiseamp*randn(length(tspan),1);
-        Inoise = repmat(Inoise,N_neurons,1);
+        %Inoise = noiseamp*randn(length(tspan),1);
+        %Inoise = repmat(Inoise,N_neurons,1);
+        numsignals = 1;
     case false
-        Inoise = noiseamp*randn(length(tspan)*N_neurons,1);
-end
+        %Inoise = noiseamp*randn(length(tspan)*N_neurons,1);
+        numsignals = N_neurons;
+end 
+[ Inoise,noiseT ] = OUNoise(noisefreq,noiseamp,simtime,dt./10,dt,numsignals);
 %Inoise = FiltNPhase(Inoise,noisefilter,1000);
-Inoise = smooth(Inoise,1/(noisefreq*dt));
-Inoise = reshape(Inoise,[length(tspan),N_neurons]);
+%Inoise = smooth(Inoise,1/(noisefreq*dt));
+%Inoise = reshape(Inoise,[length(tspan),N_neurons]);
 %http://www.mathworks.com/help/matlab/ref/ode45.html
 %plot(tspan,Inoise)
 %% System of Equations
@@ -93,7 +96,7 @@ Inoise = reshape(Inoise,[length(tspan),N_neurons]);
         a = y(a_indexlow:a_indexhigh);
         
         %% THE DIFF.EQS%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        I_tot = W*r - beta.*a + I_in + interp1(tspan,Inoise,t)' + pulsefun(t,pulseparms);
+        I_tot = W*r - beta.*a + I_in + interp1(noiseT,Inoise,t)' + pulsefun(t,pulseparms);
         
         F_I = 1./(1+exp(-I_tot));
         Ainf = 1./(1+exp(-Ak.*(r-A0)));
