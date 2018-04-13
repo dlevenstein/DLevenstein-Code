@@ -1,5 +1,5 @@
 function [ X,T ] = OUNoise(theta,sigma,duration,dt,save_dt,numsignals)
-%[ X,T ] = OUNoise(theta,sigma,duration,dt,numsignals) simulates
+%[ X,T ] = OUNoise(theta,sigma,duration,dt,save_dt,numsignals)) simulates
 %Ornstein-Uhlenbeck noise with standard deviation sigma and characteristic
 %frequency theta.
 %Simulated for a given duration with timestep dt, but output is only saved 

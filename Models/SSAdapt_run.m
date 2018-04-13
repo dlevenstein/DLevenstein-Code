@@ -69,16 +69,11 @@ tspan = [0:dt:simtime]';         %interval of integration
 %Inoise = noiseamp.*wgn(length(tspan),1,0);
 switch parms.samenoise
     case true
-        Inoise = noiseamp*randn(length(tspan),1);
-        Inoise = repmat(Inoise,N_neurons,1);
+        numsignals = 1;
     case false
-        Inoise = noiseamp*randn(length(tspan)*N_neurons,1);
-end
-%Inoise = FiltNPhase(Inoise,noisefilter,1000);
-Inoise = smooth(Inoise,(1/noisefreq)*dt);
-Inoise = reshape(Inoise,[length(tspan),N_neurons]);
-%http://www.mathworks.com/help/matlab/ref/ode45.html
-%plot(tspan,Inoise)
+        numsignals = N_neurons;
+end 
+[ Inoise,noiseT ] = OUNoise(noisefreq,noiseamp,simtime,dt./10,dt,numsignals);
 %% System of Equations
 
     function dy = SSadapt_eqs(t, y)
@@ -96,7 +91,7 @@ Inoise = reshape(Inoise,[length(tspan),N_neurons]);
         a = y(a_indexlow:a_indexhigh);
         
         %% THE DIFF.EQS%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        I_tot = W*r - a + I_in + interp1(tspan,Inoise,t)' + pulsefun(t,pulseparms);
+        I_tot = W*r - a + I_in + interp1(noiseT,Inoise,t)' + pulsefun(t,pulseparms);
         
         F_I =  k.*(heaviside(I_tot-h).*(I_tot-h)).^n;
         Ainf = beta./(1+exp(-Ak.*(r-A0)));
@@ -119,6 +114,9 @@ function Ipulse_out = pulsefun(t_in,pulseparms_in)
     t_onset=pulseparms_in(:,1);magnitude=pulseparms_in(:,2);duration=pulseparms_in(:,3);
     t_offset = t_onset + duration;
     
+    if any(t_in >= t_onset & t_in <= t_offset)
+        %keyboard
+    end
     Ipulse_out = (t_in >= t_onset & t_in <= t_offset).*magnitude;
 %     if t_in < t_onset
 %         Ipulse_out = 0;

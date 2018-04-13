@@ -42,9 +42,7 @@ end
 
 %initial conditions: no activity. 
 %                    -can add different initial conditions if desired.
-%r_init = zeros(1,N_neurons);
 r_init = rand(1,N_neurons);
-%a_init = zeros(1,N_neurons);
 a_init = rand(1,N_neurons);
 
 y0 = [r_init,a_init];       %combine initial conditions 
@@ -54,31 +52,14 @@ y0 = [r_init,a_init];       %combine initial conditions
 t_tot = simtime/dt;             %number of iterations
 tspan = [0:dt:simtime]';         %interval of integration
 
-
-% %Do these need to be here?....
-% r_sol = zeros(t_tot+1,N_neurons);       %solution array for E cells
-% a_sol = zeros(t_tot+1,N_neurons);     %solution array for theta  
-% T = tspan;                     %column vector of time points
-% Y_sol = [r_sol,a_sol];          %solution array for ode45
-
 %% Noise for Input
-%noisefilter = [0.5 10];
-%Inoise = noiseamp.*wgn(length(tspan),1,0);
 switch parms.samenoise
     case true
-        %Inoise = noiseamp*randn(length(tspan),1);
-        %Inoise = repmat(Inoise,N_neurons,1);
         numsignals = 1;
     case false
-        %Inoise = noiseamp*randn(length(tspan)*N_neurons,1);
         numsignals = N_neurons;
 end 
 [ Inoise,noiseT ] = OUNoise(noisefreq,noiseamp,simtime,dt./10,dt,numsignals);
-%Inoise = FiltNPhase(Inoise,noisefilter,1000);
-%Inoise = smooth(Inoise,1/(noisefreq*dt));
-%Inoise = reshape(Inoise,[length(tspan),N_neurons]);
-%http://www.mathworks.com/help/matlab/ref/ode45.html
-%plot(tspan,Inoise)
 %% System of Equations
 
     function dy = WCadapt_eqs(t, y)

@@ -22,7 +22,6 @@ Ibifn = importdata(filename);
 %         
 % 
 % end
-
 %%
 thisline = 1;
 thiscol = 2;
@@ -40,12 +39,28 @@ for rr = 1:length(Ibifn)
 end
 idx(thisline,2) = rr;
 
+numhopf = 0;
 bifnlines = nan(length(Ibifn(:,1)),thisline+1);
 bifnlines(:,1) = Ibifn(:,1);
 for ll = 1:thisline
     bifnlines(idx(ll,1):idx(ll,2),ll+1) = Ibifn(idx(ll,1):idx(ll,2),3);
+    
+    %For limit cycles
+    if ~isequal(Ibifn(idx(ll,1):idx(ll,2),2),Ibifn(idx(ll,1):idx(ll,2),3))
+        numhopf = numhopf+1;
+        bifnlines(:,thisline+numhopf) = nan;
+        bifnlines(idx(ll,1):idx(ll,2),thisline+numhopf) = Ibifn(idx(ll,1):idx(ll,2),2);
+    end
 end
     
+
+%% Detect/Remove large jumps
+jumpsize = diff(bifnlines);  
+jumpthresh = 0.05;  %should set based on jump sizes.....
+%figure
+%hist(log10(abs(diffsize(:,3))));
+%LogScale('x',10)
+bifnlines(abs(jumpsize)>jumpthresh)=nan;
 %%
 %figure
 %plot(Ibifn(:,1),Ibifn(:,2),'k.')
