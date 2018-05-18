@@ -29,6 +29,12 @@ labels = p.Results.labels;
 datagrouped = [];
 datagroups = [];
 for gg = 1:numdatagroups
+    if isrow(data{gg})
+        data{gg} = data{gg}';
+    end
+    if isempty(data{gg})
+        data{gg} = nan;
+    end
     datagrouped = [datagrouped ; data{gg}];
     datagroups = [datagroups ; gg.*ones(size(data{gg}))];
     

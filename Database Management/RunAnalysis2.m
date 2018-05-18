@@ -30,44 +30,36 @@ switch selectionmode
               
     %%Select Recordings from DatasetGuide spreadsheet
     case 'datasetguide'
-%         dropboxdesktop = '/mnt/data1/Dropbox/research/';
-%         dropboxlaptop = '/Users/dlevenstein/Dropbox/Research/';
-%         if exist(dropboxdesktop)
-%             dropboxdatabasefolder = fullfile(dropboxdesktop,'/Datasets');
-%         elseif exist(dropboxlaptop)
-%             dropboxdatabasefolder = fullfile(dropboxlaptop,'/Datasets');
-%         else display('No dropbox folder!'); end
-%    % dropboxdatabasefolder = '/Users/dlevenstein/Dropbox/Research/Datasets';
 
-    dropboxdatabasefolder = '/mnt/proraidDL/ProjectDatasets/S1State/'; %fix later
-    datasetguidefilename = fullfile(dropboxdatabasefolder,'DatasetGuide.xlsx');
-    
-    datasetguide=readtable(datasetguidefilename);
-    possiblebaseNames = datasetguide.RecordingName;
-    possiblebasePaths = datasetguide.basePath;
-    possibleGenotypes = datasetguide.Genotype; %make this general later
- %   possibledesktopfolders = datasetguide.DesktopFolder;
-    [s,v] = listdlg('PromptString','Which recording(s) would you like analyze?',...
-                    'ListString',possiblebaseNames);
-    baseName = possiblebaseNames(s);
-%     basePath = cellfun(@(X) fullfile(dropboxdatabasefolder,X),...
-%         possiblebasePaths(s),'UniformOutput',false);
-    basePath = possiblebasePaths(s); 
-    genotypes = possibleGenotypes(s);
+        dropboxdatabasefolder = '/mnt/proraidDL/ProjectDatasets/S1State/'; %fix later
+        datasetguidefilename = fullfile(dropboxdatabasefolder,'DatasetGuide.xlsx');
+
+        datasetguide=readtable(datasetguidefilename);
+        possiblebaseNames = datasetguide.RecordingName;
+        possiblebasePaths = datasetguide.basePath;
+        possibleGenotypes = datasetguide.Genotype; %make this general later
+     %   possibledesktopfolders = datasetguide.DesktopFolder;
+        [s,v] = listdlg('PromptString','Which recording(s) would you like analyze?',...
+                        'ListString',possiblebaseNames);
+        baseName = possiblebaseNames(s);
+    %     basePath = cellfun(@(X) fullfile(dropboxdatabasefolder,X),...
+    %         possiblebasePaths(s),'UniformOutput',false);
+        basePath = possiblebasePaths(s); 
+        genotypes = possibleGenotypes(s);
 
     %%Select Recordings from Dataset Folder 
     case 'datasetfolder'
-%     foldercontents = dir(datasetfolder);
-%     possiblerecordingnames = {foldercontents([foldercontents.isdir]==1).name};
-    [possiblebasePaths,possiblebaseNames] = bz_FindBasePaths(datasetfolder);
-    [s,v] = listdlg('PromptString','Which recording(s) would you like analyze?',...
-                    'ListString',possiblebaseNames);
-    baseName = possiblebaseNames(s);
-    basePath = possiblebasePaths(s); 
-    [temp{1:length(s)}] = deal(datasetfolder);
-    datasetfolder = temp; 
-    clear temp
-    
+    %     foldercontents = dir(datasetfolder);
+    %     possiblerecordingnames = {foldercontents([foldercontents.isdir]==1).name};
+        [possiblebasePaths,possiblebaseNames] = bz_FindBasePaths(datasetfolder);
+        [s,v] = listdlg('PromptString','Which recording(s) would you like analyze?',...
+                        'ListString',possiblebaseNames);
+        baseName = possiblebaseNames(s);
+        basePath = possiblebasePaths(s); 
+        [temp{1:length(s)}] = deal(datasetfolder);
+        datasetfolder = temp; 
+        clear temp
+
 end
 
 %How many results are in the analysis function?
