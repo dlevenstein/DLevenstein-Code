@@ -26,7 +26,7 @@ function [  ] = bz_RunAnalysis(analysisfunction,datasetfolder,varargin)
 p = inputParser;
 addParameter(p,'savein','functionPath',@isstr)
 parse(p,varargin{:})
-savein = p.Results.savefolder;
+savein = p.Results.savein;
 %% Select Recordings to Analyze 
 
 [possiblebasePaths,possiblebaseNames] = bz_FindBasePaths(datasetfolder);
@@ -66,7 +66,7 @@ for rr = 1:numrecs
     %Add: save date, baseName
     switch savein
         case 'basePath'
-            savefolder = figfolder; %or basePath...
+            savefolder = basePath{rr}; %or basePath...
         case 'functionPath'
             savefolder = figfolder; %or basePath...
         otherwise
