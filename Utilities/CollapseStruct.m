@@ -10,8 +10,9 @@ function [ structout ] = CollapseStruct( structin,dim,combine,NEST )
 %               structures/cell arrays
 %   dim         dimension along which to combine each element in the
 %               structure array. (default: 2)
-%               option: 'matching'. will catenate along the non-matching
-%               dimension
+%               option: 'match'. CollapseStruct will find the dimension
+%               along which the elements are concatenatable. If there are
+%               multiple, will pick the first one.
 %   (optional)
 %       combine     can take 'mean' or 'median' instead of concatenating
 %                   or 'std'. default: 'justcat'
@@ -43,18 +44,6 @@ fields = fieldnames(structin);
 
 for ff = 1:length(fields)
     currentfield = fields{ff};
-   % structout = setfield(structout,currentfield,value)
-%     if exist('combine','var')
-%         if strcmp(combine,'mean')
-%             for ii = 1:length(structin)
-%                 structin(ii).(currentfield) = nanmean(structin(ii).(currentfield),dim);
-%             end
-%         elseif strcmp(combine,'median')
-%             for ii = 1:length(structin)
-%                 structin(ii).(currentfield) = nanmedian(structin(ii).(currentfield),dim);
-%             end
-%         end
-%     end
 
 	if isstruct(structin(1).(currentfield)) & NEST %For Nested Structures
        structout.(currentfield) = cat(1,structin(:).(currentfield));
@@ -62,30 +51,40 @@ for ff = 1:length(fields)
        continue
     elseif iscell(structin(1).(currentfield)) & NEST %For cell array in field
         structout.(currentfield) = cat(1,structin(:).(currentfield));
-        structout.(currentfield) = cat(dim,structout.(currentfield){:});
+            if strcmp(dim,'match')
+                catdim = bz_FindCatableDims(structin(:).(currentfield));
+            else
+                catdim = dim;
+            end
+        structout.(currentfield) = cat(catdim,structout.(currentfield){:});
     elseif (isstring(structin(1).(currentfield))||ischar(structin(1).(currentfield))) & NEST %For string in field
         structout.(currentfield) = {structin(:).(currentfield)};
     else %For simple array in field
         try
-        structout.(currentfield) = cat(dim,structin(:).(currentfield));
+            %Concatenate Array
+            if strcmp(dim,'match')
+                catdim = bz_FindCatableDims({structin(:).(currentfield)});
+            else
+                catdim = dim;
+            end
+        structout.(currentfield) = cat(catdim(1),structin(:).(currentfield));
         catch
             keyboard
-           
             continue
         end
-    end
+	end
 
     
     
     switch combine
         case 'mean'
-            structout.(currentfield) = nanmean(structout.(currentfield),dim);
+            structout.(currentfield) = nanmean(structout.(currentfield),catdim);
         case 'median'
-            structout.(currentfield) = nanmedian(structout.(currentfield),dim);
+            structout.(currentfield) = nanmedian(structout.(currentfield),catdim);
         case 'std'
-            structout.(currentfield) = nanstd(structout.(currentfield),[],dim);
+            structout.(currentfield) = nanstd(structout.(currentfield),[],catdim);
         case 'sem'
-            structout.(currentfield) =  nanstd(structout.(currentfield),[],dim)./sqrt(sum(~isnan(structout.(currentfield)),dim));
+            structout.(currentfield) =  nanstd(structout.(currentfield),[],catdim)./sqrt(sum(~isnan(structout.(currentfield)),catdim));
     end
 end
 
