@@ -19,8 +19,12 @@ nummats = length(matnames);
 FIELDMISMATCH=false;
 %%
 for mm = 1:nummats
-    matname = fullfile(lookatfolder,matnames(mm).name); 
-    loadmat = load(matname);
+    filename = fullfile(lookatfolder,matnames(mm).name); 
+    loadmat = load(filename);
+    
+    %
+    [pathstr,name] = fileparts(filename);
+    loadmat.name = name;
     
     %For the first .mat
     if ~exist('results','var'); results(mm) = loadmat; continue; end  
@@ -32,12 +36,15 @@ for mm = 1:nummats
     if ~isempty(newfields);
         for ff = 1:length(newfields)
             results(1).(newfields{ff}) = []; 
+            %results(1).name = name;
         end
         FIELDMISMATCH=true;
     end
     
+    %results(mm).name = name;
     results = orderfields(results,loadmat);
     results(mm) = loadmat;
+    %results(mm).name = name;
        
 end
 
