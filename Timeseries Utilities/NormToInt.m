@@ -9,6 +9,9 @@ function [normdata,intmean,intstd] = NormToInt(data,normtype,int,sf,varargin)
 %           to normalize the data with respect to (optional)
 %   sf      (optional) sampling frequency of the data. default 1
 %
+%(optional)
+%   'moving' true/false (default: false)
+%
 %Note: modified Z score is median-based and robust to outliers
 %see https://ibm.co/2qi4Vy5
 %
@@ -27,8 +30,9 @@ else
 end
 %%
 if ~exist('int','var') || isempty(int)
-    int = [1 size(data,1)];
+    int = [0 Inf];
 end
+
 
 if isa(int,'intervalSet')
     int = [Start(int,'s'), End(int,'s')];
@@ -43,6 +47,7 @@ end
 
 int = round(int*sf); %Convert intervals from seconds to indices 
 int(int==0)=1; %Turn time=0 to the first indexed datapoint
+int(isinf(int))= size(data,1);
 
 %Make vector that is nans at times not in the intervals
 int_data = nan(size(data));

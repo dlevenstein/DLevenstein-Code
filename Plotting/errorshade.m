@@ -1,9 +1,14 @@
 function h=errorshade(x,y,le,ue,c,error_est_type)
-%%function h=errorshade(x,y,ue,le,c)
+%%function h=errorshade(x,y,ue,le,c,error_est_type)
 %error_est_type is a string: 'scalar' or 'vector'
-%this function can return a handle for manipulation of graphics properties or can be called sans handle and will plot shaded error bars 
-%x = vector x data, y = vector y data, ue and le = upper/lower y error values respectively, c = color (input: 'c')
-%if want symmetric error bars, enter in same vector or number for ue and le (ie can enter vector so error bar is diff at each value or can enter in a number, eg 95% conf int low and up bound (same number, one does not have to be negative) and you'll get shaded in error bars for cont data)
+%this function can return a handle for manipulation of graphics properties 
+%or can be called sans handle and will plot shaded error bars 
+%x = vector x data, y = vector y data, ue and le = upper/lower y error values
+%respectively, c = color (input: 'c')
+%if want symmetric error bars, enter in same vector or number for ue and le 
+%(ie can enter vector so error bar is diff at each value or can enter in a 
+%number, eg 95% conf int low and up bound (same number, one does not have 
+%to be negative) and you'll get shaded in error bars for cont data)
 %RS 
 
 x=x(:);y=y(:);le=le(:);ue=ue(:);

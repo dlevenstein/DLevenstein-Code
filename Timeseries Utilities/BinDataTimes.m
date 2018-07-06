@@ -3,15 +3,29 @@ function [ bincenters,binmeans,binstd,binnum,binneddata ] = BinDataTimes( data,t
 %%
 if isrow(data); data = data'; end
 
-numbins = length(binedges)-1;
+if isrow(binedges) || iscolumn(binedges)
+    binedges_temp(:,1) = binedges(1:end-1);
+    binedges_temp(:,2) = binedges(2:end);
+    binedges = binedges_temp;
+end
+bincenters = mean(binedges,2);
+
+if isempty(data)
+    binmeans = nan(size(bincenters));
+    binstd=nan(size(bincenters));
+    binnum=zeros(size(bincenters)); binneddata=[];
+    return
+end
+
+numbins = length(binedges(:,1));
 numdatacols = length(data(1,:));
 %%
-bincenters = binedges(1:end-1)+diff(binedges)/2;
+
 binmeans = nan(numbins,numdatacols);
 binstd = nan(numbins,numdatacols);
 binnum = nan(numbins,numdatacols);
 for bb = 1:numbins
-    bintimes = times>=binedges(bb) & times<=binedges(bb+1);
+    bintimes = times>=binedges(bb,1) & times<=binedges(bb,2);
     binneddata{bb} = data(bintimes,:);
     
     if ismember(varargin, 'sum')

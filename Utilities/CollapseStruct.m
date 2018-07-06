@@ -10,6 +10,8 @@ function [ structout ] = CollapseStruct( structin,dim,combine,NEST )
 %               structures/cell arrays
 %   dim         dimension along which to combine each element in the
 %               structure array. (default: 2)
+%               option: 'matching'. will catenate along the non-matching
+%               dimension
 %   (optional)
 %       combine     can take 'mean' or 'median' instead of concatenating
 %                   or 'std'. default: 'justcat'
@@ -67,7 +69,7 @@ for ff = 1:length(fields)
         try
         structout.(currentfield) = cat(dim,structin(:).(currentfield));
         catch
-           % keyboard
+            keyboard
            
             continue
         end
