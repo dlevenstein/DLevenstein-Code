@@ -21,6 +21,7 @@ function [freqs,synchcoupling,ratepowercorr,...
 %       'controls'        'thinspikes','jitterspikes','shufflespikes'
 %       'downsample'
 %       'subpop'
+%       'jittersig'     true/false for jittered spikes significance
 %
 %OUTPUT
 %   f
@@ -36,6 +37,7 @@ function [freqs,synchcoupling,ratepowercorr,...
 %   -Put synch/spikerate in same section
 %   -multiple ints - this (along with controls) will require making
 %   subfunctions to loop
+%   -clean and buzcode
 %
 %DLevenstein 2016
 %% inputParse for Optional Inputs and Defaults
@@ -48,7 +50,7 @@ checkInt = @(x) size(x,2)==2 && isnumeric(x) || isa(x,'intervalSet');
 
 defaultNfreqs = 100;
 defaultNcyc = 5;
-defaultFrange = [1 64];
+defaultFrange = [1 128];
 %validFranges = {'delta','theta','spindles','gamma','ripples'};
 %checkFrange = @(x) any(validatestring(x,validFranges)) || size(x) == [1,2];
 checkFrange = @(x) isnumeric(x) && length(x(1,:)) == 2 && length(x(:,1)) == 1;
@@ -71,7 +73,8 @@ addParameter(p,'synchdt',defaultSynchdt,@isnumeric)
 addParameter(p,'synchwin',defaultSynchwin,@isnumeric)
 addParameter(p,'sorttype',defaultSorttype,checkSorttype)
 addParameter(p,'DOWNSAMPLE',defaultDOWN,@isnumeric)
-addParameter(p,'subpop',0,@isnumeric)
+addParameter(p,'subpop',0)
+addParameter(p,'jittersig',false)
 
 parse(p,varargin{:})
 %Clean up this junk...
@@ -82,6 +85,7 @@ frange = p.Results.frange;
 ncyc = p.Results.ncyc;
 synchdt = p.Results.synchdt;
 subpop = p.Results.subpop;
+jittersig = p.Results.jittersig;
 
 %% Deal with input types
 
@@ -125,12 +129,11 @@ end
 t_LFP = (1:length(LFP))'/sf_LFP;
 
 %% Subpopulations
-switch subpop
-    case 0
+if isequal(subpop,0)
         numpop = 1;
         popcellind = {1:numcells};
-    case 'done'
-    otherwise
+elseif isequal(subpop,'done')
+else
         pops = unique(subpop);
         numpop = length(pops);
         for pp = 1:numpop
@@ -287,24 +290,25 @@ function [phmag,phangle] = spkphase(spktimes_fn)
          
 end
 
-%Jitter for Significane
-numjitt = 100;
-jitterbuffer = zeros(numcells,nfreqs,numjitt);
-jitterwin = 2/frange(1);
-%tic
-for jj = 1:numjitt
-    if mod(jj,10) == 1
-        display(['Jitter ',num2str(jj),' of ',num2str(numjitt)])
+if jittersig
+    %Jitter for Significane
+    numjitt = 100;
+    jitterbuffer = zeros(numcells,nfreqs,numjitt);
+    jitterwin = 2/frange(1);
+    %tic
+    for jj = 1:numjitt
+        if mod(jj,10) == 1
+            display(['Jitter ',num2str(jj),' of ',num2str(numjitt)])
+        end
+        jitterspikes = JitterSpiketimes(spiketimes,jitterwin);
+        phmagjitt = cellfun(@(X) spkphase(X),jitterspikes,'UniformOutput',false);
+        jitterbuffer(:,:,jj) = cat(1,phmagjitt{:});
     end
-    jitterspikes = JitterSpiketimes(spiketimes,jitterwin);
-    phmagjitt = cellfun(@(X) spkphase(X),jitterspikes,'UniformOutput',false);
-    jitterbuffer(:,:,jj) = cat(1,phmagjitt{:});
+    %toc
+    jittermean = mean(jitterbuffer,3);
+    jitterstd = std(jitterbuffer,[],3);
+    spikephasesig = (spikephasemag-jittermean)./jitterstd;
 end
-%toc
-jittermean = mean(jitterbuffer,3);
-jitterstd = std(jitterbuffer,[],3);
-spikephasesig = (spikephasemag-jittermean)./jitterstd;
-
 %% Example Figure : Phase-Coupling Significance
 % cc = 6;
 % figure
@@ -377,6 +381,8 @@ figure
         
     otherwise
 %% Figure: Spectrum
+posnegcolor = makeColorMap([0 0 0.8],[1 1 1],[0.8 0 0]);
+
 figure
     subplot(3,2,1)
         hold on
@@ -428,7 +434,8 @@ figure
         xlabel('f (Hz)');ylabel(['Cell - Sorted by ',sortname])
         LogScale('x',2)
         title('Rate - Power Correlation')
-        ColorbarWithAxis([-0.04 0.04],'rho')
+        colormap(gca,posnegcolor)
+        ColorbarWithAxis([-0.2 0.2],'rho')
     subplot(2,2,4)
         imagesc(log2(freqs),1:numcells,spikephasemag(spikephasesort,:))
         xlabel('f (Hz)');ylabel(['Cell - Sorted by ',sortname])

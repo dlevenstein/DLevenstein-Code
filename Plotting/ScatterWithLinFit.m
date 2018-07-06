@@ -1,17 +1,33 @@
-function [correlation,signif] = ScatterWithLinFit( x,y,color,varargin )
+function [correlation,signif] = ScatterWithLinFit( x,y,varargin )
 %[correlation,signif] = ScatterWithLinFit( x,y,color,varargin )
 %
-%
+%'sig'   'pO','conf',or 'none' 
+%'corrtype' 'spearman' or 'pearson'
+%'color'
 %
 %% Options/Defaults
+p = inputParser;
+addParameter(p,'sig','p0');
+addParameter(p,'corrtype','spearman');
+addParameter(p,'color','k');
+addParameter(p,'markersize',5);
+addParameter(p,'RemoveOutlierX',false);
+addParameter(p,'showtext',true);
 
-sig = 'p0';
-corrtype = 'spearman';
-if ~exist('color','var')
-    color = 'k'
-end
+parse(p,varargin{:})
+
+sig = p.Results.sig;
+corrtype = p.Results.corrtype;
+color = p.Results.color;
+markersize = p.Results.markersize;
+RemoveOutlierX = p.Results.RemoveOutlierX;
+showtext = p.Results.showtext;
 
 
+
+
+x = double(x);
+y = double(y);
 %%
 if length(x(1,:))>length(x(:,1))
     x = x';
@@ -28,7 +44,7 @@ noinfs = ~isinf(x) & ~isinf(y);
 x = x(noinfs);
 y = y(noinfs);
 
-if sum(ismember(varargin, 'RemoveOutlierX'))
+if RemoveOutlierX
     [~,xoutlierind] = max(abs(x-mean(x)));
     x(xoutlierind) = [];
     y(xoutlierind) = [];
@@ -69,15 +85,20 @@ end
 
 %%
 props.color = color;
-plot(x,y,'.','Color',props.color,'markersize',10)
-axis tight
+plot(x,y,'.','Color',props.color,'markersize',markersize)
+xlim([min(x) max(x)]);ylim([min(y) max(y)])
 lsline
 
+
+if showtext
 xbouns = get(gca,'Xlim');
 ybouns = get(gca,'ylim');
 textloc = [xbouns(1),ybouns(2) - 0.1*(ybouns(2)-ybouns(1))];
 textloc = [xbouns(1)+ 0.05*(xbouns(2)-xbouns(1)),ybouns(2) + 0.05*(ybouns(2)-ybouns(1))];
 text(textloc(1),textloc(2),{[corrtext,sigtext]},'color',props.color)
 xlim(xbouns);ylim(ybouns);
+end
+
+axis tight
 end
 
