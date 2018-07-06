@@ -72,7 +72,7 @@ for rr = 1:numrecs
         otherwise
             error('savein must be ''basePath'' or ''functionPath''')
     end
-    savename = fullfile(savefolder,[baseName{rr},'.AnalysisResults.',analysisfunction]);
+    savename = fullfile(savefolder,[baseName{rr},'.AnalysisResults.',analysisfunction,'.mat']);
     save(savename,outputNames{:});
     
     close all

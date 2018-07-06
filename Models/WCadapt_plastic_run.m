@@ -39,6 +39,14 @@ if isfield(parms,'pulseparms')
     pulseparms = parms.pulseparms;
 end
 
+stimparms.stimtimes = 0;
+stimparms.stimvals = 0;
+stimparms.stimdur = 0;
+if isfield(parms,'stimparms')
+    %if isempty(parms.pulseparms);pulseparms = [0 0 0];end
+    stimparms = parms.stimparms;
+end
+
 
 %initial conditions: no activity. 
 %                    -can add different initial conditions if desired.
@@ -77,7 +85,8 @@ end
         a = y(a_indexlow:a_indexhigh);
         
         %% THE DIFF.EQS%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        I_tot = W*r - beta.*a + I_in + interp1(noiseT,Inoise,t)' + pulsefun(t,pulseparms);
+        I_tot = W*r - beta.*a + I_in + interp1(noiseT,Inoise,t)' +...
+            pulsefun(t,pulseparms) + stimfun(t,stimparms);
         
         F_I = 1./(1+exp(-I_tot));
         Ainf = 1./(1+exp(-Ak.*(r-A0)));
@@ -109,5 +118,19 @@ function Ipulse_out = pulsefun(t_in,pulseparms_in)
     end
 end
 
+%% Function for training input
+function Istim_out = stimfun(t_in,stimparms_in)
+    stimtimes = stimparms_in.stimtimes;
+    stimvals = stimparms_in.stimvals;
+    stimdur = stimparms_in.stimdur;
+    
+    %Is the time in be
+    whichstim = t_in>=stimtimes & t_in<=(stimtimes+stimdur);
+    if any(whichstim)
+        Istim_out = stimvals(:,whichstim);
+    else
+        Istim_out = 0;
+    end
+end
 end
 

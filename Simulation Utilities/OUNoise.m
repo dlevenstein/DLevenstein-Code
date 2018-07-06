@@ -2,6 +2,8 @@ function [ X,T ] = OUNoise(theta,sigma,duration,dt,save_dt,numsignals)
 %[ X,T ] = OUNoise(theta,sigma,duration,dt,save_dt,numsignals)) simulates
 %Ornstein-Uhlenbeck noise with standard deviation sigma and characteristic
 %frequency theta.
+%Initial conditions: random value from normal distribution around 0 with
+%std=sigma
 %Simulated for a given duration with timestep dt, but output is only saved 
 %at time points save_dt. Can simulate multiple signals simultaneously.
 %
@@ -24,7 +26,7 @@ simtimevector = 0:dt:duration;
 SimTimeLength = length(simtimevector);
 randnums = randn(numsignals,SimTimeLength);
 savecounter = 1;
-X_t = 0;
+X_t = sigma.*randn(numsignals,1); %Start at random value - gaussian distribted around sigma
 clear X
 clear T
 for tt=1:SimTimeLength
