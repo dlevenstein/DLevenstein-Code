@@ -13,6 +13,8 @@ function [  ] = bz_RunAnalysis(analysisfunction,datasetfolder,varargin)
 %
 %   (optional)
 %       'savein'    'basePath' or 'functionPath'
+%       'cluster'   true/false, use true if running on the cluster to
+%                   submit each recording as a batch job  NOT YET DONE
 %
 %
 %TO ADD
@@ -25,8 +27,10 @@ function [  ] = bz_RunAnalysis(analysisfunction,datasetfolder,varargin)
 %%
 p = inputParser;
 addParameter(p,'savein','functionPath',@isstr)
+addParameter(p,'cluster',false,@islogical)
 parse(p,varargin{:})
 savein = p.Results.savein;
+cluster = p.Results.cluster;
 %% Select Recordings to Analyze 
 
 [possiblebasePaths,possiblebaseNames] = bz_FindBasePaths(datasetfolder);

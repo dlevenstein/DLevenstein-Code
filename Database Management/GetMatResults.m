@@ -24,7 +24,7 @@ for mm = 1:nummats
     
     %
     [pathstr,name] = fileparts(filename);
-    loadmat.name = name;
+    loadmat.name = string(name);
     
     %For the first .mat
     if ~exist('results','var'); results(mm) = loadmat; continue; end  
