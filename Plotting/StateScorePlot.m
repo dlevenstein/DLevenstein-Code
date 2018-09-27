@@ -10,6 +10,11 @@ plotylimits = get(gca,'ylim');
 ylow = plotylimits(2)*1.05;
 yrange = plotylimits(2)-plotylimits(1);
 
+
+if isstruct(stateints)
+    stateints = struct2cell(stateints);
+end
+
 numstates = length(stateints);
 for ss = 1:numstates
     if isa(stateints{ss},'intervalSet')

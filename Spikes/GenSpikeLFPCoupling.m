@@ -158,7 +158,7 @@ end
 switch nfreqs  
     case 1
         
-        [~,LFP_amp,LFP_phase] = FiltNPhase(LFP,frange,sf_LFP,ncyc);
+        [~,LFP_amp,LFP_phase] = FiltNPhase(double(LFP),frange,sf_LFP,ncyc);
         
         LFP_amp = IsolateEpochs2(LFP_amp,int,0,sf_LFP);
         LFP_phase = IsolateEpochs2(LFP_phase,int,0,sf_LFP);
