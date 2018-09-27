@@ -8,11 +8,17 @@ function [ ] = ColorbarWithAxis(cbounds,label,varargin)
 %
 %DLevenstein 2016
 %% inputParse for input options
+parms = inputParser;
+addParameter(parms,'location','eastoutside');
+addParameter(parms,'labelloc','side');
+addParameter(parms,'scale','lin');
 
-labelloc = 'side';
-scale = 'lin';
 
-barlocation = 'eastoutside';
+parse(parms,varargin{:})
+barlocation = parms.Results.location;
+labelloc = parms.Results.labelloc;
+scale = parms.Results.scale;
+
 
 %%
 cb = colorbar(barlocation);

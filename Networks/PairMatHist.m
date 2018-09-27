@@ -43,6 +43,7 @@ for f_i = 1:numbins
     end
 end
 
-
+corrbin.binedges = binedges;
+corrbin.bincenters = bincenters;
 end
 
