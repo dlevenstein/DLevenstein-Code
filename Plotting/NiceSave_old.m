@@ -1,4 +1,4 @@
-function [  ] = NiceSave(figname,figfolder,baseName,figtype)
+function [  ] = NiceSave_old(figname,figfolder,baseName,figtype)
 %NiceSave(figname,baseName,recname) formats the figure for best viewing
 %and saves it as a .pdf in figfolder with name recname_figname.pdf
 %
