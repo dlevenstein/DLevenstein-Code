@@ -3,7 +3,8 @@ function [ phandle ] = StateScorePlot( stateints,colors )
 %from state intervals with designated colors.
 %
 %INPUTS
-%   stateints   {Nstates} cell array of [Nints x 2] time intervals
+%   stateints   structure with intervals or 
+%               {Nstates} cell array of [Nints x 2] time intervals
 %   colors      {Nstates} cell array of colors
 %%
 plotylimits = get(gca,'ylim');

@@ -1,4 +1,4 @@
-function [ T, Y_sol,Inoise ] = WCadapt_run(simtime,dt,parms)
+function [ T, Y_sol,Inoise,Ipulse ] = WCadapt_run(simtime,dt,parms,varargin)
 %UNTITLED2 Summary of this function goes here
 %
 %parms
@@ -19,6 +19,14 @@ function [ T, Y_sol,Inoise ] = WCadapt_run(simtime,dt,parms)
 %   -Allow for general activation function as input
 %
 %%
+
+p = inputParser;
+addParameter(p,'init',[]);
+parse(p,varargin{:})
+init = p.Results.init;
+
+
+
 parms.samenoise = false;
 
 %% Establish Vectors etc
@@ -40,13 +48,17 @@ if isfield(parms,'pulseparms')
 end
 
 
-%initial conditions: no activity. 
+%initial conditions: random activity. 
 %                    -can add different initial conditions if desired.
+if isempty(init)
 r_init = rand(1,N_neurons);
 a_init = rand(1,N_neurons);
 
 y0 = [r_init,a_init];       %combine initial conditions 
                              %into one long vector for ode45
+else
+    y0 = init;
+end
                                             
 %time and solution arrays for ode45
 t_tot = simtime/dt;             %number of iterations
@@ -94,19 +106,23 @@ end
 
 [T,Y_sol] = ode45(@WCadapt_eqs,tspan,y0);
 
-
+%noise
+Ipulse = pulsefun(T,pulseparms);
 %% Function for pulse
 function Ipulse_out = pulsefun(t_in,pulseparms_in)
     t_onset=pulseparms_in(1);magnitude=pulseparms_in(2);duration=pulseparms_in(3);
     t_offset = t_onset + duration;
     
-    if t_in < t_onset
-        Ipulse_out = 0;
-    elseif t_in >= t_onset && t_in <= t_offset
-        Ipulse_out = magnitude;
-    elseif t_in > t_offset
-        Ipulse_out = 0;
-    end
+    Ipulse_out = zeros(size(t_in));
+    Ipulse_out(t_in >= t_onset & t_in <= t_offset) = magnitude;
+    
+%     if t_in < t_onset
+%         Ipulse_out = 0;
+%     elseif t_in >= t_onset && t_in <= t_offset
+%         Ipulse_out = magnitude;
+%     elseif t_in > t_offset
+%         Ipulse_out = 0;
+%     end
 end
 
 end
