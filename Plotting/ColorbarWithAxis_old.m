@@ -1,4 +1,4 @@
-function [ ] = ColorbarWithAxis(cbounds,label,varargin)
+function [ ] = ColorbarWithAxis_old(cbounds,label,varargin)
 %ColorbarWithAxis(cbounds,label) adds a colorbar to a imageplot and labels
 %axis and bounds with > and <.
 %
