@@ -10,7 +10,7 @@ function [normdata,intmean,intstd] = NormToInt(data,normtype,int,sf,varargin)
 %   sf      (optional) sampling frequency of the data. default 1
 %
 %(optional)
-%   'moving' true/false (default: false)
+%   'moving' window duration for moving smoothing window (default: false)
 %
 %Note: modified Z score is median-based and robust to outliers
 %see https://ibm.co/2qi4Vy5
