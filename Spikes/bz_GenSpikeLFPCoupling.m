@@ -1,14 +1,14 @@
-function [freqs,synchcoupling,ratepowercorr,...
-    spikephasemag,spikephaseangle,popcellind,cellpopidx,...
-    spikephasesig,ratepowersig]...
-    = bz_GenSpikeLFPCoupling(spiketimes,LFP,varargin)
-% GenSpikeLFPCoupling(spiketimes,LFP)
+function [SpikeLFPCoupling] = bz_GenSpikeLFPCoupling(spiketimes,LFP,varargin)
+% SpikeLFPCoupling = GenSpikeLFPCoupling(spiketimes,LFP)
 %
 %INPUT
 %   spiketimes          {Ncells} cell array of spiketimes for each cell
-%                                   or TSObject
-%   LFP                 [t x nchannels] vector or buzcode structure with
-%                       lfp.data, lfp.timestamps, lfp.samplingRate
+%                       -or- TSObject
+%   LFP                 structure with fields (from bz_GetLFP)
+%                           lfp.data
+%                           lfp.timestamps
+%                           lfp.samplingRate
+%                       -or- [t x nchannels] vector 
 %   (optional)
 %       'sf_LFP'
 %       'frange'
@@ -76,6 +76,7 @@ addParameter(p,'synchwin',defaultSynchwin,@isnumeric)
 addParameter(p,'sorttype',defaultSorttype,checkSorttype)
 addParameter(p,'DOWNSAMPLE',defaultDOWN,@isnumeric)
 addParameter(p,'subpop',0)
+addParameter(p,'channel',[])
 addParameter(p,'jittersig',false)
 addParameter(p,'showFig',true)
 addParameter(p,'saveFig',false)
@@ -92,6 +93,7 @@ subpop = p.Results.subpop;
 jittersig = p.Results.jittersig;
 SHOWFIG = p.Results.showFig; 
 figfolder = p.Results.saveFig; 
+usechannel = p.Results.channel; 
 
 %% Deal with input types
 
@@ -133,16 +135,20 @@ if isa(int,'intervalSet')
 end
 
 %LFP Input
-if isstruct(LFP)
-    %lfpstruct = LFP;
-    t_LFP = LFP.timestamps;
-    sf_LFP = LFP.samplingRate;
-    channels = LFP.channels;
-    LFP = LFP.data;
-else
+if ~isstruct(LFP)
     t_LFP = (1:length(LFP))'/sf_LFP;
 end
 
+if ~isempty(usechannel)
+    usechannel = ismember(LFP.channels,usechannel);
+    LFP.data = LFP.data(:,usechannel);
+end
+
+%Downsampling
+if p.Results.DOWNSAMPLE
+    assert((LFP.samplingRate/p.Results.DOWNSAMPLE)>2*max(frange),'downsample factor is too big...')    
+    [ LFP ] = bz_DownsampleLFP(LFP,p.Results.DOWNSAMPLE);
+end
 %% Subpopulations
 if isequal(subpop,0)
         numpop = 1;
@@ -158,213 +164,175 @@ end
 
 cellpopidx = zeros(1,numcells);
 
-%% Processing LFP
 
-%Downsampling
-if p.Results.DOWNSAMPLE
-    downsamplefactor = p.Results.DOWNSAMPLE;
-    sf_LFP = sf_LFP/downsamplefactor;
-    assert(sf_LFP>2*max(frange),'downsample factor is too big...')
-    LFP = downsample(LFP,downsamplefactor);
-    t_LFP = downsample(t_LFP,downsamplefactor);%should have time vector to keep track of time...
-end
-
-
-switch nfreqs  
-    case 1
-        
-       %[~,LFP_amp,LFP_phase] = FiltNPhase(double(LFP),frange,sf_LFP,ncyc);
-       lfp4filt.data  = LFP; lfp4filt.samplingRate = sf_LFP; lfp4filt.timestamps = t_LFP;
-        filtered = bz_Filter(lfp4filt,'passband',frange,'order',ncyc,'filter','fir1');
-        LFP_amp = filtered.amp; LFP_phase = filtered.phase;
-        LFP_amp = IsolateEpochs2(LFP_amp,int,0,sf_LFP);
-        LFP_phase = IsolateEpochs2(LFP_phase,int,0,sf_LFP);
-        t_LFP = IsolateEpochs2(t_LFP,int,0,sf_LFP);
-        LFP_phase = cat(1,LFP_phase{:});
-        LFP_amp = cat(1,LFP_amp{:});
-        %Normalize Power to Mean Power
-        LFP_amp = LFP_amp./mean(LFP_amp);
-        t_LFP = cat(1,t_LFP{:});
-        
-        [t_LFP,IA] = unique(t_LFP); %remove doubles from overlapping ints
-        LFP_amp = LFP_amp(IA,:);
-        LFP_phase = LFP_phase(IA,:);
-        
-        freqs = [];
-        
-    otherwise
-        %Restrict to intervals of interest
-        LFP = IsolateEpochs2(LFP,int,0,sf_LFP);
-        t_LFP = IsolateEpochs2(t_LFP,int,0,sf_LFP);
-
-        [freqs,~,LFP_amp] = WaveSpec(LFP,frange,nfreqs,ncyc,1/sf_LFP,'log');
-        LFP_amp = cat(2,LFP_amp{:})';
-        t_LFP = cat(1,t_LFP{:});
-        
-        [t_LFP,IA] = unique(t_LFP); %remove doubles from overlapping ints
-        LFP_amp = LFP_amp(IA,:);
-
-        LFP_phase = angle(LFP_amp);
-        LFP_amp = abs(LFP_amp);
-        %Normalize power to mean power for each frequency
-        LFP_amp = bsxfun(@(X,Y) X./Y,LFP_amp,nanmean(LFP_amp,1));
-end
-
-
-%% Calculate Population Synchrony Coupling
+%% Calculate spike matrix
 overlap = p.Results.synchwin/synchdt;
 [spikemat,t_synch] = SpktToSpkmat(spiketimes, [t_LFP(end)], synchdt,overlap);
 
-spikemat = IsolateEpochs2(spikemat,int,0,1/synchdt);
-t_synch = IsolateEpochs2(t_synch,int,0,1/synchdt);
+inint = InIntervals(t_synch,int);
+spikemat = spikemat(inint,:);
+t_synch = spikemat(inint);
 
-spikemat = cat(1,spikemat{:});
-t_synch = cat(1,t_synch{:});
+%% Processing LFP
 
-for pp = 1:numpop
-    if length(popcellind{pp}) == 0
-        synchcoupling(pp).powercorr = [];
-        synchcoupling(pp).phasemag = [];
-        synchcoupling(pp).phaseangle = [];
-        numpop = numpop-1;
-        continue
+%HERE: loop channels
+for cc = 1:numchan
+    chanID = LFP.channels(cc);
+
+    switch nfreqs  
+        case 1
+            %Single frequency band - filter/hilbert
+            filtered = bz_Filter(LFP,'passband',frange,'order',ncyc,'filter','fir1');
+            LFP_filt = filtered.hilbert; 
+            t_LFP = filtered.timestamps;
+            freqs = [];
+            clear filtered
+
+            inint = InIntervals(t_LFP,int);
+            LFP_filt = LFP_filt(inint,:);
+            t_LFP = t_LFP(inint);
+
+            %Normalize Power to Mean Power
+            LFP_filt = LFP_filt./mean(abs(LFP_filt));
+
+        otherwise
+            %Multiple frequencies: Wavelet Transform
+            wavespec = bz_WaveSpec(LFP,'intervals',int,'showprogress',true,'ncyc',ncyc,...
+                'nfreqs',nfreqs,'frange',frange,'chanID',chanID);
+            LFP_filt = wavespec.data;  
+            t_LFP = wavespec.timestamps;
+            freqs = wavespec.freqs;
+            clear wavespec
+
+            %Normalize power to mean power for each frequency
+            LFP_filt = bsxfun(@(X,Y) X./Y,LFP_filt,nanmean(abs(LFP_filt),1));
     end
-    cellpopidx(popcellind{pp}) = pp;
-    numpopcells = length(popcellind{pp});
-    popsynch = sum(spikemat(:,popcellind{pp})>0,2)./numpopcells;
-    popsynch = popsynch./mean(popsynch);
-    %% Population Synchrony-Power/Phase Coupling and Rate-Power Coupling
-    %Find phase and power at the closest LFP timepoint to the synch timepoint. 
-    %Deals with different dt issue.
-    power4synch = interp1(t_LFP,LFP_amp,t_synch,'nearest');
-    phase4synch = interp1(t_LFP,LFP_phase,t_synch,'nearest');
 
-    %Calculate Synchrony-Power Coupling as correlation between synchrony and
-    %power
-    [synchcoupling(pp).powercorr] = corr(popsynch,power4synch,'type','spearman','rows','complete');
+    %Get Power/Phase at each spike matrix time point 
+    power4synch = interp1(t_LFP,abs(LFP_filt),t_synch,'nearest');
+    phase4synch = interp1(t_LFP,angle(LFP_filt),t_synch,'nearest');
+    clear LFP_filt
 
-    %Synchrony-Phase Coupling (magnitude/angle of power-weighted mean resultant vector)
-    resultvect = nanmean(power4synch.*bsxfun(@(popmag,ang) popmag.*exp(1i.*ang),popsynch,phase4synch),1);
-    synchcoupling(pp).phasemag = abs(resultvect);
-    synchcoupling(pp).phaseangle = angle(resultvect);
-
-    clear power4synch; clear phase4synch   
-end
-
-%% Calculate Cell Rate-Power Correlation
-ratedt = round(1/min(frange),3);
-[spikemat,t_rate] = SpktToSpkmat(spiketimes, [t_LFP(end)], ratedt,2);
-
-spikemat = IsolateEpochs2(spikemat,int,0,1/ratedt);
-t_rate = IsolateEpochs2(t_rate,int,0,1/ratedt);
-spikemat = cat(1,spikemat{:});
-t_rate = cat(1,t_rate{:});
-
-power4rate = interp1(t_LFP,LFP_amp,t_rate,'nearest');
-
-%Spike-Power Coupling
-[ratepowercorr,ratepowersig] = corr(spikemat,power4rate,'type','spearman','rows','complete');
-
-
-%% Spike-Phase Coupling
-[spikephasemag,spikephaseangle] = cellfun(@(X) spkphase(X),spiketimes,...
-    'UniformOutput',false);
-spikephasemag = cat(1,spikephasemag{:});
-spikephaseangle = cat(1,spikephaseangle{:});
-
-
-%Spike-Phase Coupling function - takes spike times from a single cell and
-%caluclates phase coupling magnitude/angle
-function [phmag,phangle] = spkphase(spktimes_fn)
-    %Spike Times have to be column vector
-        if isrow(spktimes_fn); spktimes_fn=spktimes_fn'; end
-        if isempty(spktimes_fn); phmag=nan;phangle=nan; return; end
-
-    %Take only spike times in intervals
-    spktimes_fn = spktimes_fn(InIntervals(spktimes_fn,int));
-    %Find phase and power at the closest LFP timepoint to each spike.
-    phase4spike = interp1(t_LFP,LFP_phase,spktimes_fn,'nearest');
-    power4spikephase = interp1(t_LFP,LFP_amp,spktimes_fn,'nearest');
-    %Calculate (power normalized) resultant vector
-    rvect = nanmean(power4spikephase.*exp(1i.*phase4spike),1);
-    phmag = abs(rvect);
-    phangle = angle(rvect);
-    
-    %% Example Figure : Phase-Coupling
-%     if phmag >0.1
-%     figure
-%             rose(phase4spike)
-%            % set(gca,'ytick',[])
-%             hold on
-%              polar(phase4spike,power4spikephase.*40,'k.')
-%             % hold on
-%              %compass([0 phangle],[0 phmag],'r')
-%              compass(rvect.*700,'r')
-%         delete(findall(gcf,'type','text'));
-%         % delete the text objects
-%     end
-   
-         
-end
-
-if jittersig
-    %Jitter for Significane
-    numjitt = 100;
-    jitterbuffer = zeros(numcells,nfreqs,numjitt);
-    jitterwin = 2/frange(1);
-    %tic
-    for jj = 1:numjitt
-        if mod(jj,10) == 1
-            display(['Jitter ',num2str(jj),' of ',num2str(numjitt)])
+    %% Population Synchrony: Phase Coupling and Rate Modulation
+    for pp = 1:numpop
+        if length(popcellind{pp}) == 0
+            synchcoupling(pp).powercorr = [];
+            synchcoupling(pp).phasemag = [];
+            synchcoupling(pp).phaseangle = [];
+            numpop = numpop-1;
+            continue
         end
-        jitterspikes = JitterSpiketimes(spiketimes,jitterwin);
-        phmagjitt = cellfun(@(X) spkphase(X),jitterspikes,'UniformOutput',false);
-        jitterbuffer(:,:,jj) = cat(1,phmagjitt{:});
+        cellpopidx(popcellind{pp}) = pp;
+        numpopcells = length(popcellind{pp});
+        popsynch = sum(spikemat(:,popcellind{pp})>0,2)./numpopcells;
+        popsynch = popsynch./mean(popsynch);
+
+        %Calculate Synchrony-Power Coupling as correlation between synchrony and power
+        [synchcoupling(pp).powercorr(:,cc)] = corr(popsynch,power4synch,'type','spearman','rows','complete');
+
+        %Synchrony-Phase Coupling (magnitude/angle of power-weighted mean resultant vector)
+        resultvect = nanmean(power4synch.*bsxfun(@(popmag,ang) popmag.*exp(1i.*ang),popsynch,phase4synch),1);
+        synchcoupling(pp).phasemag(:,cc) = abs(resultvect);
+        synchcoupling(pp).phaseangle(:,cc) = angle(resultvect);
+
+        clear phase4synch   
     end
-    %toc
-    jittermean = mean(jitterbuffer,3);
-    jitterstd = std(jitterbuffer,[],3);
-    spikephasesig = (spikephasemag-jittermean)./jitterstd;
+
+    %% Cell Rate-Power Modulation
+
+    %Spike-Power Coupling
+    [ratepowercorr(:,:,cc),ratepowersig(:,:,cc)] = corr(spikemat,power4synch,'type','spearman','rows','complete');
+    clear power4synch 
+
+    %% Cell Spike-Phase Coupling
+    [spikephasemag_cell,spikephaseangle_cell] = cellfun(@(X) spkphase(X),spiketimes,...
+        'UniformOutput',false);
+    spikephasemag(:,:,cc) = cat(1,spikephasemag_cell{:});
+    spikephaseangle(:,:,cc) = cat(1,spikephaseangle_cell{:});
+
+    if jittersig
+        %Jitter for Significane
+        numjitt = 100;
+        jitterwin = 2/frange(1);
+
+        jitterbuffer = zeros(numcells,nfreqs,numjitt);
+        for jj = 1:numjitt
+            if mod(jj,10) == 1
+                display(['Jitter ',num2str(jj),' of ',num2str(numjitt)])
+            end
+            jitterspikes = JitterSpiketimes(spiketimes,jitterwin);
+            phmagjitt = cellfun(@(X) spkphase(X),jitterspikes,'UniformOutput',false);
+            jitterbuffer(:,:,jj) = cat(1,phmagjitt{:});
+        end
+        jittermean = mean(jitterbuffer,3);
+        jitterstd = std(jitterbuffer,[],3);
+        spikephasesig(:,:,cc) = (spikephasemag-jittermean)./jitterstd;
+    end
+    %% Example Figure : Phase-Coupling Significance
+    % cc = 6;
+    % figure
+    %     hist(squeeze(jitterbuffer(cc,:,:)),10)
+    %     hold on
+    %     plot(spikephasemag(cc).*[1 1],get(gca,'ylim')./4,'r','LineWidth',2)
+    %     plot(spikephasemag(cc),get(gca,'ylim')./4,'ro','LineWidth',2)
+    %     xlabel('pMRL')
+    %     ylabel('Number of Jitters')
+    %     xlim([0 0.2])
+
+
 end
-%% Example Figure : Phase-Coupling Significance
-% cc = 6;
-% figure
-%     hist(squeeze(jitterbuffer(cc,:,:)),10)
-%     hold on
-%     plot(spikephasemag(cc).*[1 1],get(gca,'ylim')./4,'r','LineWidth',2)
-%     plot(spikephasemag(cc),get(gca,'ylim')./4,'ro','LineWidth',2)
-%     xlabel('pMRL')
-%     ylabel('Number of Jitters')
-%     xlim([0 0.2])
 
+%% Output
 
-%% Sorting (and other plot-related things)
-switch p.Results.sorttype
-    case 'pca'
-        [~,SCORE,~,~,EXP] = pca(cellpower);
-        [~,spikepowersort] = sort(SCORE(:,1));
-        
-        [~,SCORE,~,~,EXP_phase] = pca(cellphasemag);
-        [~,spikephasesort] = sort(SCORE(:,1));
-        sortname = 'PC1';
-    case 'none'
-        spikepowersort = 1:numcells;
-    case 'fsort'
-        fidx = interp1(freqs,1:nfreqs,sortf,'nearest'); 
-        [~,spikepowersort] = sort(cellpower(:,fidx));
-        [~,spikephasesort] = sort(cellphasemag(:,fidx));
-        sortname = [num2str(sortf) 'Hz Magnitude'];
-    case 'rate'
-        spkrt = cellfun(@length,spiketimes);
-        [~,spikepowersort] = sort(spkrt);
-        spikephasesort = spikepowersort;
-        sortname = 'Firing Rate';
-    otherwise
-        spikepowersort = sortidx;
+SpikeLFPCoupling.freqs = freqs;
+SpikeLFPCoupling.pop = synchcoupling;
+SpikeLFPCoupling.pop.popcellind = popcellind;
+SpikeLFPCoupling.pop.cellpopidx = cellpopidx;
+SpikeLFPCoupling.cell.ratepowercorr = ratepowercorr;
+SpikeLFPCoupling.cell.ratepowersig = ratepowersig;
+SpikeLFPCoupling.cell.spikephasemag = spikephasemag;
+SpikeLFPCoupling.cell.spikephaseangle = spikephaseangle;
+SpikeLFPCoupling.cell.spikephasesig = spikephasesig;
+
+SpikeLFPCoupling.detectorinfo.detectorname = 'bz_GenSpikeLFPCoupling';
+SpikeLFPCoupling.detectorinfo.detectiondate = datetime('today');
+SpikeLFPCoupling.detectorinfo.detectionintervals = int;
+SpikeLFPCoupling.detectorinfo.detectionchannel = LFP.channels;
+
+if SAVEMAT
+    save(savefile,'SpikeLFPCoupling')
 end
 
-%%
+%% Figure
 if SHOWFIG
+    
+    %Sorting (and other plot-related things)
+    switch p.Results.sorttype
+        case 'pca'
+            [~,SCORE,~,~,EXP] = pca(cellpower);
+            [~,spikepowersort] = sort(SCORE(:,1));
+
+            [~,SCORE,~,~,EXP_phase] = pca(cellphasemag);
+            [~,spikephasesort] = sort(SCORE(:,1));
+            sortname = 'PC1';
+        case 'none'
+            spikepowersort = 1:numcells;
+        case 'fsort'
+            fidx = interp1(freqs,1:nfreqs,sortf,'nearest'); 
+            [~,spikepowersort] = sort(cellpower(:,fidx));
+            [~,spikephasesort] = sort(cellphasemag(:,fidx));
+            sortname = [num2str(sortf) 'Hz Magnitude'];
+        case 'rate'
+            spkrt = cellfun(@length,spiketimes);
+            [~,spikepowersort] = sort(spkrt);
+            spikephasesort = spikepowersort;
+            sortname = 'Firing Rate';
+        otherwise
+            spikepowersort = sortidx;
+    end
+    
+    
+    
     switch nfreqs  
         case 1
     %% Figure: 1 Freq Band
@@ -481,5 +449,42 @@ end
 
 end
 
+
+
+
+
+
+
+%% Spike-Phase Coupling function
+%takes spike times from a single cell and caluclates phase coupling magnitude/angle
+function [phmag,phangle] = spkphase(spktimes_fn)
+    %Spike Times have to be column vector
+        if isrow(spktimes_fn); spktimes_fn=spktimes_fn'; end
+        if isempty(spktimes_fn); phmag=nan;phangle=nan; return; end
+
+    %Take only spike times in intervals
+    spktimes_fn = spktimes_fn(InIntervals(spktimes_fn,int));
+    %Find phase and power at the closest LFP timepoint to each spike.
+    phase4spike = interp1(t_LFP,LFP_phase,spktimes_fn,'nearest');
+    power4spikephase = interp1(t_LFP,LFP_amp,spktimes_fn,'nearest');
+    %Calculate (power normalized) resultant vector
+    rvect = nanmean(power4spikephase.*exp(1i.*phase4spike),1);
+    phmag = abs(rvect);
+    phangle = angle(rvect);
+    
+    %% Example Figure : Phase-Coupling
+    % if phmag >0.1
+    % figure
+    %         rose(phase4spike)
+    %        % set(gca,'ytick',[])
+    %         hold on
+    %          polar(phase4spike,power4spikephase.*40,'k.')
+    %         % hold on
+    %          %compass([0 phangle],[0 phmag],'r')
+    %          compass(rvect.*700,'r')
+    %     delete(findall(gcf,'type','text'));
+    %     % delete the text objects
+    % end        
+end
 
 
