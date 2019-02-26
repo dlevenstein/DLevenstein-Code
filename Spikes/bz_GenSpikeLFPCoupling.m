@@ -16,24 +16,35 @@ function [SpikeLFPCoupling] = bz_GenSpikeLFPCoupling(spiketimes,LFP,varargin)
 %       'waveparms'...
 %       'nfreqs'
 %       'int'
+%       'ISIpower'      true: calculate mutual information between power
+%                       ISI distribution
 %       'cellLFPchannel'  The local LFP channel associated with each cell (if
 %                       sites are in different electroanatomical regions)
 %       'cellsort'        'pca','none','sortf','sortorder','celltype','rate'
 %       'controls'        'thinspikes','jitterspikes','shufflespikes'
 %       'downsample'
-%       'subpop'
+%       'subpop'        %DL: update this... to buzcode
 %       'jittersig'     true/false for jittered spikes significance
 %       'showFig'       true/false
 %
 %OUTPUT
-%   f
-%   cellpower
-%   cellphasemag
-%   cellphaseang
-%   synchpower
-%   synchphasemag
-%   synchphaseang
-%   spikephasesig
+%        SpikeLFPCoupling
+%           .freqs
+%           .pop
+%               .popcellind
+%               .cellpopidx
+%           .cell
+%               .ratepowercorr
+%               .ratepowersig
+%               .spikephasemag
+%               .spikephaseangle
+%               .spikephasesig
+% 
+%           .detectorinfo
+%               .detectorname
+%               .detectiondate
+%               .detectionintervals
+%               .detectionchanne;
 %
 %TO DO
 %   -Put synch/spikerate in same section
@@ -80,6 +91,8 @@ addParameter(p,'channel',[])
 addParameter(p,'jittersig',false)
 addParameter(p,'showFig',true)
 addParameter(p,'saveFig',false)
+addParameter(p,'saveMat',false)
+addParameter(p,'ISIpower',false)
 
 parse(p,varargin{:})
 %Clean up this junk...
@@ -91,9 +104,11 @@ ncyc = p.Results.ncyc;
 synchdt = p.Results.synchdt;
 subpop = p.Results.subpop;
 jittersig = p.Results.jittersig;
-SHOWFIG = p.Results.showFig; 
+SHOWFIG = p.Results.showFig;
+SAVEMAT = p.Results.saveMat;
 figfolder = p.Results.saveFig; 
 usechannel = p.Results.channel; 
+ISIpower = p.Results.ISIpower; 
 
 %% Deal with input types
 
@@ -167,16 +182,41 @@ cellpopidx = zeros(1,numcells);
 
 %% Calculate spike matrix
 overlap = p.Results.synchwin/synchdt;
-[spikemat,t_synch] = SpktToSpkmat(spiketimes, [t_LFP(end)], synchdt,overlap);
+spikemat = bz_SpktToSpkmat(spiketimes,'binsize',p.Results.synchwin,'overlap',overlap);
 
-inint = InIntervals(t_synch,int);
-spikemat = spikemat(inint,:);
-t_synch = spikemat(inint);
+inint = InIntervals(spikemat.timestamps,int);
+spikemat.data = spikemat.data(inint,:);
+spikemat.timestamps = spikemat.timestamps(inint);
 
-%% Processing LFP
+
+%% Calculate ISIs (if needed), Apply interval/spike number limits here
+
+%Take only spike times in intervals
+spiketimes_int = cellfun(@(X) X(InIntervals(X,int)),spiketimes,'UniformOutput',false);
+
+if ISIpower
+    %Calculate (pre/postceding ISI) for each spike
+    ISIs_prev = cellfun(@(X) [nan; diff(X)],spiketimes,'UniformOutput',false);
+    ISIs_next = cellfun(@(X) [diff(X); nan],spiketimes,'UniformOutput', false);
+    ISIs_prev_int = cellfun(@(X,Y) X(InIntervals(Y,int)),ISIs_prev,spiketimes,'UniformOutput',false);
+    ISIs_next_int = cellfun(@(X,Y) X(InIntervals(Y,int)),ISIs_next,spiketimes,'UniformOutput',false);
+end
+
+% spikes.inint = cellfun(@(X) InIntervals(X,ints),spikes.times,'UniformOutput',false);
+% 
+% %Apply spikelimit here
+% spikes.toomany = cellfun(@(X) (sum(X)-spikeLim).*((sum(X)-spikeLim)>0),spikes.inint);
+% spikes.numcells = length(spikes.times);
+% for cc = 1:spikes.numcells
+%     spikes.inint{cc}(randsample(find(spikes.inint{cc}),spikes.toomany(cc)))=false;
+% end
+% 
+% spikes.times = cellfun(@(X,Y) X(Y),spikes.times,spikes.inint,'UniformOutput',false);
+
+%% Processing LFP - filter etc
 
 %HERE: loop channels
-for cc = 1:numchan
+for cc = 1:length(LFP.channels)
     chanID = LFP.channels(cc);
 
     switch nfreqs  
@@ -209,9 +249,8 @@ for cc = 1:numchan
     end
 
     %Get Power/Phase at each spike matrix time point 
-    power4synch = interp1(t_LFP,abs(LFP_filt),t_synch,'nearest');
-    phase4synch = interp1(t_LFP,angle(LFP_filt),t_synch,'nearest');
-    clear LFP_filt
+    power4synch = interp1(t_LFP,abs(LFP_filt),spikemat.timestamps,'nearest');
+    phase4synch = interp1(t_LFP,angle(LFP_filt),spikemat.timestamps,'nearest');
 
     %% Population Synchrony: Phase Coupling and Rate Modulation
     for pp = 1:numpop
@@ -224,7 +263,7 @@ for cc = 1:numchan
         end
         cellpopidx(popcellind{pp}) = pp;
         numpopcells = length(popcellind{pp});
-        popsynch = sum(spikemat(:,popcellind{pp})>0,2)./numpopcells;
+        popsynch = sum(spikemat.data(:,popcellind{pp})>0,2)./numpopcells;
         popsynch = popsynch./mean(popsynch);
 
         %Calculate Synchrony-Power Coupling as correlation between synchrony and power
@@ -234,18 +273,23 @@ for cc = 1:numchan
         resultvect = nanmean(power4synch.*bsxfun(@(popmag,ang) popmag.*exp(1i.*ang),popsynch,phase4synch),1);
         synchcoupling(pp).phasemag(:,cc) = abs(resultvect);
         synchcoupling(pp).phaseangle(:,cc) = angle(resultvect);
-
-        clear phase4synch   
+   
     end
 
     %% Cell Rate-Power Modulation
 
     %Spike-Power Coupling
-    [ratepowercorr(:,:,cc),ratepowersig(:,:,cc)] = corr(spikemat,power4synch,'type','spearman','rows','complete');
+    [ratepowercorr(:,:,cc),ratepowersig(:,:,cc)] = corr(spikemat.data,power4synch,'type','spearman','rows','complete');
     clear power4synch 
+    clear phase4synch
 
     %% Cell Spike-Phase Coupling
-    [spikephasemag_cell,spikephaseangle_cell] = cellfun(@(X) spkphase(X),spiketimes,...
+    
+    %Find filtered LFP at the closest LFP timepoint to each spike.
+    spkLFP_int = cellfun(@(X) interp1(t_LFP,LFP_filt,X,'nearest'),spiketimes_int,'UniformOutput',false);
+    
+    
+    [spikephasemag_cell,spikephaseangle_cell] = cellfun(@(X,Y) spkphase(X,Y),spiketimes_int,spkLFP_int,...
         'UniformOutput',false);
     spikephasemag(:,:,cc) = cat(1,spikephasemag_cell{:});
     spikephaseangle(:,:,cc) = cat(1,spikephaseangle_cell{:});
@@ -279,20 +323,35 @@ for cc = 1:numchan
     %     ylabel('Number of Jitters')
     %     xlim([0 0.2])
 
-
+    %% Calculate mutual information between ISI distribution and power
+    
+    if ISIpower
+        for nn = 1:length(spiketimes)
+            bz_Counter(nn,length(spiketimes),'Cell')
+            [totmutXPow(nn,:,cc)] = ISIpowerMutInf(ISIs_prev_int{nn},ISIs_next_int{nn},spkLFP_int{nn});
+        end
+        
+    end
 end
+
+clear LFP_filt
 
 %% Output
 
 SpikeLFPCoupling.freqs = freqs;
 SpikeLFPCoupling.pop = synchcoupling;
-SpikeLFPCoupling.pop.popcellind = popcellind;
-SpikeLFPCoupling.pop.cellpopidx = cellpopidx;
+%SpikeLFPCoupling.pop.popcellind = popcellind; %update to match buzcode cell class input
+%SpikeLFPCoupling.pop.cellpopidx = cellpopidx;
 SpikeLFPCoupling.cell.ratepowercorr = ratepowercorr;
 SpikeLFPCoupling.cell.ratepowersig = ratepowersig;
 SpikeLFPCoupling.cell.spikephasemag = spikephasemag;
 SpikeLFPCoupling.cell.spikephaseangle = spikephaseangle;
-SpikeLFPCoupling.cell.spikephasesig = spikephasesig;
+if ISIpower
+    SpikeLFPCoupling.cell.ISIpowermodulation = totmutXPow;
+end
+if exist('spikephasesig','var')
+    SpikeLFPCoupling.cell.spikephasesig = spikephasesig;
+end
 
 SpikeLFPCoupling.detectorinfo.detectorname = 'bz_GenSpikeLFPCoupling';
 SpikeLFPCoupling.detectorinfo.detectiondate = datetime('today');
@@ -447,44 +506,68 @@ if SHOWFIG
     end
 end
 
+
+
+
+
+
+
+
+
+    %% Spike-Phase Coupling function
+    %takes spike times from a single cell and caluclates phase coupling magnitude/angle
+    function [phmag,phangle] = spkphase(spktimes_fn,spkLFP_fn)
+        %Spike Times have to be column vector
+            if isrow(spktimes_fn); spktimes_fn=spktimes_fn'; end
+            if isempty(spktimes_fn); phmag=nan;phangle=nan; return; end
+        %Calculate (power normalized) resultant vector
+        rvect = nanmean(abs(spkLFP_fn).*exp(1i.*angle(spkLFP_fn)),1);
+        phmag = abs(rvect);
+        phangle = angle(rvect);
+
+        %% Example Figure : Phase-Coupling
+        % if phmag >0.1
+        % figure
+        %         rose(phase4spike)
+        %        % set(gca,'ytick',[])
+        %         hold on
+        %          polar(phase4spike,power4spikephase.*40,'k.')
+        %         % hold on
+        %          %compass([0 phangle],[0 phmag],'r')
+        %          compass(rvect.*700,'r')
+        %     delete(findall(gcf,'type','text'));
+        %     % delete the text objects
+        % end        
+    end
+
+    %% Power-ISI coupling function
+    function [totmutXPow] = ISIpowerMutInf(prevISI,nextISI,spkLFP)
+        powerbins = linspace(-0.5,0.5,10);
+        logISIbins = linspace(-2.5,1,50);
+        for ff = 1:size(spkLFP,2)
+            allISIs = [prevISI;nextISI];
+            allLFP = [spkLFP;spkLFP];
+
+            joint = hist3([log10(allISIs) log10(abs(allLFP(:,ff)))],{logISIbins,powerbins});
+            joint = joint./sum(joint(:));
+
+            margX = hist(log10(allISIs),logISIbins);
+            margX = margX./sum(margX);
+            margPower = hist(log10(abs(allLFP(:,ff))),powerbins);
+            margPower = margPower./sum(margPower);
+            jointindependent =  bsxfun(@times, margX.', margPower);
+
+
+            mutXPow = joint.*log2(joint./jointindependent); % mutual info at each bin
+            totmutXPow(ff) = nansum(mutXPow(:)); % sum of all mutual information 
+        end
+        
+        %% Example Figure: ISI-power modulation
+%         figure
+%         subplot(2,2,1)
+%             imagesc(logISIbins,powerbins,joint')
+%         subplot(2,2,2)
+%             imagesc(logISIbins,powerbins,jointindependent')
+        
+    end
 end
-
-
-
-
-
-
-
-%% Spike-Phase Coupling function
-%takes spike times from a single cell and caluclates phase coupling magnitude/angle
-function [phmag,phangle] = spkphase(spktimes_fn)
-    %Spike Times have to be column vector
-        if isrow(spktimes_fn); spktimes_fn=spktimes_fn'; end
-        if isempty(spktimes_fn); phmag=nan;phangle=nan; return; end
-
-    %Take only spike times in intervals
-    spktimes_fn = spktimes_fn(InIntervals(spktimes_fn,int));
-    %Find phase and power at the closest LFP timepoint to each spike.
-    phase4spike = interp1(t_LFP,LFP_phase,spktimes_fn,'nearest');
-    power4spikephase = interp1(t_LFP,LFP_amp,spktimes_fn,'nearest');
-    %Calculate (power normalized) resultant vector
-    rvect = nanmean(power4spikephase.*exp(1i.*phase4spike),1);
-    phmag = abs(rvect);
-    phangle = angle(rvect);
-    
-    %% Example Figure : Phase-Coupling
-    % if phmag >0.1
-    % figure
-    %         rose(phase4spike)
-    %        % set(gca,'ytick',[])
-    %         hold on
-    %          polar(phase4spike,power4spikephase.*40,'k.')
-    %         % hold on
-    %          %compass([0 phangle],[0 phmag],'r')
-    %          compass(rvect.*700,'r')
-    %     delete(findall(gcf,'type','text'));
-    %     % delete the text objects
-    % end        
-end
-
-
