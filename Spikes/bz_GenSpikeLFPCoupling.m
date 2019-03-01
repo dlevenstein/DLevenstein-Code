@@ -1,9 +1,11 @@
-function [SpikeLFPCoupling] = bz_GenSpikeLFPCoupling(spiketimes,LFP,varargin)
-% SpikeLFPCoupling = GenSpikeLFPCoupling(spiketimes,LFP)
+function [SpikeLFPCoupling] = bz_GenSpikeLFPCoupling(spikes,LFP,varargin)
+% SpikeLFPCoupling = GenSpikeLFPCoupling(spikes,LFP)
 %
 %INPUT
-%   spiketimes          {Ncells} cell array of spiketimes for each cell
-%                       -or- TSObject
+%   spikes          structure with fields (from bz_getSpikes)
+%                           .times
+%                       -or-
+%                       {Ncells} cell array of spiketimes for each cell
 %   LFP                 structure with fields (from bz_GetLFP)
 %                           lfp.data
 %                           lfp.timestamps
@@ -26,6 +28,8 @@ function [SpikeLFPCoupling] = bz_GenSpikeLFPCoupling(spiketimes,LFP,varargin)
 %       'subpop'        %DL: update this... to buzcode
 %       'jittersig'     true/false for jittered spikes significance
 %       'showFig'       true/false
+%       'spikeLim'      limit number of spikes to look at for each cell 
+%                       (randomly omits spikes, default: Inf)
 %
 %OUTPUT
 %        SpikeLFPCoupling
@@ -93,6 +97,7 @@ addParameter(p,'showFig',true)
 addParameter(p,'saveFig',false)
 addParameter(p,'saveMat',false)
 addParameter(p,'ISIpower',false)
+addParameter(p,'spikeLim',Inf)
 
 parse(p,varargin{:})
 %Clean up this junk...
@@ -109,40 +114,15 @@ SAVEMAT = p.Results.saveMat;
 figfolder = p.Results.saveFig; 
 usechannel = p.Results.channel; 
 ISIpower = p.Results.ISIpower; 
+spikeLim = p.Results.spikeLim;
 
 %% Deal with input types
 
-%Spiketimes can be: tsdArray of cells, cell array of cells, cell array of
-%tsdArrays (multiple populations)
-if isa(spiketimes,'tsdArray')
-    numcells = length(spiketimes);
-    for cc = 1:numcells
-        spiketimestemp{cc} = Range(spiketimes{cc},'s');
-    end
-    spiketimes = spiketimestemp;
-    clear spiketimestemp
-elseif isa(spiketimes,'cell') && isa(spiketimes{1},'tsdArray')
-    numpop = length(spiketimes);
-    lastpopnum = 0;
-    for pp = 1:numpop
-        if length(spiketimes{pp})==0
-            spiketimes{pp} = {};
-            popcellind{pp} = [];
-            continue
-        end
-        for cc = 1:length(spiketimes{pp})
-            spiketimestemp{cc} = Range(spiketimes{pp}{cc},'s');
-        end
-        spiketimes{pp} = spiketimestemp;
-        popcellind{pp} = [1:length(spiketimes{pp})]+lastpopnum;
-        lastpopnum = popcellind{pp}(end);
-        clear spiketimestemp
-    end
-    spiketimes = cat(2,spiketimes{:});
-    numcells = length(spiketimes);
-    subpop = 'done';
-elseif isa(spiketimes,'cell')
-    numcells = length(spiketimes);
+if isa(spikes,'cell')
+    spikes_temp.numcells = length(spikes);
+    spikes_temp.times = spikes;
+    spikes = spikes_temp;
+    clear spikes_temp
 end
 
 if isa(int,'intervalSet')
@@ -177,12 +157,12 @@ else
         end
 end
 
-cellpopidx = zeros(1,numcells);
+cellpopidx = zeros(1,spikes.numcells);
 
 
 %% Calculate spike matrix
 overlap = p.Results.synchwin/synchdt;
-spikemat = bz_SpktToSpkmat(spiketimes,'binsize',p.Results.synchwin,'overlap',overlap);
+spikemat = bz_SpktToSpkmat(spikes,'binsize',p.Results.synchwin,'overlap',overlap);
 
 inint = InIntervals(spikemat.timestamps,int);
 spikemat.data = spikemat.data(inint,:);
@@ -192,32 +172,32 @@ spikemat.timestamps = spikemat.timestamps(inint);
 %% Calculate ISIs (if needed), Apply interval/spike number limits here
 
 %Take only spike times in intervals
-spiketimes_int = cellfun(@(X) X(InIntervals(X,int)),spiketimes,'UniformOutput',false);
+spikes.inint = cellfun(@(X) InIntervals(X,int),spikes.times,'UniformOutput',false);
 
 if ISIpower
     %Calculate (pre/postceding ISI) for each spike
-    ISIs_prev = cellfun(@(X) [nan; diff(X)],spiketimes,'UniformOutput',false);
-    ISIs_next = cellfun(@(X) [diff(X); nan],spiketimes,'UniformOutput', false);
-    ISIs_prev_int = cellfun(@(X,Y) X(InIntervals(Y,int)),ISIs_prev,spiketimes,'UniformOutput',false);
-    ISIs_next_int = cellfun(@(X,Y) X(InIntervals(Y,int)),ISIs_next,spiketimes,'UniformOutput',false);
+    spikes.ISIs_prev = cellfun(@(X) [nan; diff(X)],spikes.times,'UniformOutput',false);
+    spikes.ISIs_next = cellfun(@(X) [diff(X); nan],spikes.times,'UniformOutput', false);
 end
 
-% spikes.inint = cellfun(@(X) InIntervals(X,ints),spikes.times,'UniformOutput',false);
-% 
-% %Apply spikelimit here
-% spikes.toomany = cellfun(@(X) (sum(X)-spikeLim).*((sum(X)-spikeLim)>0),spikes.inint);
-% spikes.numcells = length(spikes.times);
-% for cc = 1:spikes.numcells
-%     spikes.inint{cc}(randsample(find(spikes.inint{cc}),spikes.toomany(cc)))=false;
-% end
-% 
-% spikes.times = cellfun(@(X,Y) X(Y),spikes.times,spikes.inint,'UniformOutput',false);
+%Apply spikelimit here
+spikes.toomany = cellfun(@(X) (sum(X)-spikeLim).*((sum(X)-spikeLim)>0),spikes.inint);
+spikes.numcells = length(spikes.times);
+for cc = 1:spikes.numcells
+    spikes.inint{cc}(randsample(find(spikes.inint{cc}),spikes.toomany(cc)))=false;
+end
+
+%Restrict to up to spikelim spikes in interval
+spikes.times = cellfun(@(X,Y) X(Y),spikes.times,spikes.inint,'UniformOutput',false);
 
 %% Processing LFP - filter etc
 
 %HERE: loop channels
 for cc = 1:length(LFP.channels)
     chanID = LFP.channels(cc);
+    if length(LFP.channels)>1
+         fprintf('Channel %d (%d of %d)\n',chanID,cc,length(LFP.channels))
+    end
 
     switch nfreqs  
         case 1
@@ -248,9 +228,16 @@ for cc = 1:length(LFP.channels)
             LFP_filt = bsxfun(@(X,Y) X./Y,LFP_filt,nanmean(abs(LFP_filt),1));
     end
 
-    %Get Power/Phase at each spike matrix time point 
-    power4synch = interp1(t_LFP,abs(LFP_filt),spikemat.timestamps,'nearest');
-    phase4synch = interp1(t_LFP,angle(LFP_filt),spikemat.timestamps,'nearest');
+    %Get Power/Phase at each spike matrix time point and each spike time
+    spikemat.filtLFP = interp1(t_LFP,LFP_filt,spikemat.timestamps,'nearest');
+    %Get complex-valued filtered LFP at each spike time
+    if spikes.numcells>50
+        disp('Interpolating LFP at each spike... If this is prohibitive (time or RAM), try using ''spikeLim''')
+    end
+    for nn = 1:spikes.numcells
+        bz_Counter(nn,spikes.numcells,'Cell')
+        spikes.filtLFP{nn} = interp1(t_LFP,LFP_filt,spikes.times{nn},'nearest');
+    end
 
     %% Population Synchrony: Phase Coupling and Rate Modulation
     for pp = 1:numpop
@@ -267,10 +254,11 @@ for cc = 1:length(LFP.channels)
         popsynch = popsynch./mean(popsynch);
 
         %Calculate Synchrony-Power Coupling as correlation between synchrony and power
-        [synchcoupling(pp).powercorr(:,cc)] = corr(popsynch,power4synch,'type','spearman','rows','complete');
+        [synchcoupling(pp).powercorr(:,cc)] = corr(popsynch,abs(spikemat.filtLFP),'type','spearman','rows','complete');
 
         %Synchrony-Phase Coupling (magnitude/angle of power-weighted mean resultant vector)
-        resultvect = nanmean(power4synch.*bsxfun(@(popmag,ang) popmag.*exp(1i.*ang),popsynch,phase4synch),1);
+        resultvect = nanmean(abs(spikemat.filtLFP).*bsxfun(@(popmag,ang) popmag.*exp(1i.*ang),...
+            popsynch,angle(spikemat.filtLFP)),1);
         synchcoupling(pp).phasemag(:,cc) = abs(resultvect);
         synchcoupling(pp).phaseangle(:,cc) = angle(resultvect);
    
@@ -279,17 +267,14 @@ for cc = 1:length(LFP.channels)
     %% Cell Rate-Power Modulation
 
     %Spike-Power Coupling
-    [ratepowercorr(:,:,cc),ratepowersig(:,:,cc)] = corr(spikemat.data,power4synch,'type','spearman','rows','complete');
-    clear power4synch 
-    clear phase4synch
+    [ratepowercorr(:,:,cc),ratepowersig(:,:,cc)] = corr(spikemat.data,abs(spikemat.filtLFP),'type','spearman','rows','complete');
 
     %% Cell Spike-Phase Coupling
     
     %Find filtered LFP at the closest LFP timepoint to each spike.
-    spkLFP_int = cellfun(@(X) interp1(t_LFP,LFP_filt,X,'nearest'),spiketimes_int,'UniformOutput',false);
+
     
-    
-    [spikephasemag_cell,spikephaseangle_cell] = cellfun(@(X,Y) spkphase(X,Y),spiketimes_int,spkLFP_int,...
+    [spikephasemag_cell,spikephaseangle_cell] = cellfun(@(X) spkphase(X),spikes.filtLFP,...
         'UniformOutput',false);
     spikephasemag(:,:,cc) = cat(1,spikephasemag_cell{:});
     spikephaseangle(:,:,cc) = cat(1,spikephaseangle_cell{:});
@@ -304,8 +289,11 @@ for cc = 1:length(LFP.channels)
             if mod(jj,10) == 1
                 display(['Jitter ',num2str(jj),' of ',num2str(numjitt)])
             end
-            jitterspikes = JitterSpiketimes(spiketimes,jitterwin);
-            phmagjitt = cellfun(@(X) spkphase(X),jitterspikes,'UniformOutput',false);
+            jitterspikes = JitterSpiketimes(spikes.times,jitterwin);
+            jitterLFP = cellfun(@(X) interp1(t_LFP,LFP_filt,X,'nearest'),...
+                jitterspikes,'UniformOutput',false);
+    
+            phmagjitt = cellfun(@(X) spkphase(X),jitterLFP,'UniformOutput',false);
             jitterbuffer(:,:,jj) = cat(1,phmagjitt{:});
         end
         jittermean = mean(jitterbuffer,3);
@@ -326,12 +314,24 @@ for cc = 1:length(LFP.channels)
     %% Calculate mutual information between ISI distribution and power
     
     if ISIpower
-        for nn = 1:length(spiketimes)
-            bz_Counter(nn,length(spiketimes),'Cell')
-            [totmutXPow(nn,:,cc)] = ISIpowerMutInf(ISIs_prev_int{nn},ISIs_next_int{nn},spkLFP_int{nn});
+        for nn = 1:spikes.numcells
+            bz_Counter(nn,spikes.numcells,'Calculating Power-ISI MI. Cell')
+            [totmutXPow(nn,:,cc)] = ISIpowerMutInf(spikes.ISIs_prev{nn}(spikes.inint{nn}),...
+                spikes.ISIs_next{nn}(spikes.inint{nn}),spikes.filtLFP{nn});
         end
         
     end
+    
+    %%
+    randsample(spikes.numcells,1);
+    figure
+    subplot(2,2,1)
+        imagesc(log2(freqs),[1 10],squeeze(mean(totmutXPow,1))')
+        LogScale('x',2)
+    subplot(2,2,2)
+        imagesc(log2(freqs),[1 10],squeeze(totmutXPow(randsample(spikes.numcells,1),:,:))')
+    %caxis([0 0.2])
+    LogScale('x',2)
 end
 
 clear LFP_filt
@@ -382,7 +382,7 @@ if SHOWFIG
             [~,spikephasesort] = sort(cellphasemag(:,fidx));
             sortname = [num2str(sortf) 'Hz Magnitude'];
         case 'rate'
-            spkrt = cellfun(@length,spiketimes);
+            spkrt = cellfun(@length,spikes.times);
             [~,spikepowersort] = sort(spkrt);
             spikephasesort = spikepowersort;
             sortname = 'Firing Rate';
@@ -485,14 +485,14 @@ if SHOWFIG
 
 
         subplot(2,2,2)
-            imagesc(log2(freqs),1:numcells,ratepowercorr(spikepowersort,:))
+            imagesc(log2(freqs),1:spikes.numcells,ratepowercorr(spikepowersort,:))
             xlabel('f (Hz)');ylabel(['Cell - Sorted by ',sortname])
             LogScale('x',2)
             title('Rate - Power Correlation')
             colormap(gca,posnegcolor)
             ColorbarWithAxis([-0.2 0.2],'rho')
         subplot(2,2,4)
-            imagesc(log2(freqs),1:numcells,spikephasemag(spikephasesort,:))
+            imagesc(log2(freqs),1:spikes.numcells,spikephasemag(spikephasesort,:))
             xlabel('f (Hz)');ylabel(['Cell - Sorted by ',sortname])
             title('Spike - Phase Coupling')
             LogScale('x',2)
@@ -516,10 +516,10 @@ end
 
     %% Spike-Phase Coupling function
     %takes spike times from a single cell and caluclates phase coupling magnitude/angle
-    function [phmag,phangle] = spkphase(spktimes_fn,spkLFP_fn)
+    function [phmag,phangle] = spkphase(spkLFP_fn)
         %Spike Times have to be column vector
-            if isrow(spktimes_fn); spktimes_fn=spktimes_fn'; end
-            if isempty(spktimes_fn); phmag=nan;phangle=nan; return; end
+            if isrow(spkLFP_fn); spkLFP_fn=spkLFP_fn'; end
+            if isempty(spkLFP_fn); phmag=nan;phangle=nan; return; end
         %Calculate (power normalized) resultant vector
         rvect = nanmean(abs(spkLFP_fn).*exp(1i.*angle(spkLFP_fn)),1);
         phmag = abs(rvect);
@@ -541,33 +541,55 @@ end
     end
 
     %% Power-ISI coupling function
-    function [totmutXPow] = ISIpowerMutInf(prevISI,nextISI,spkLFP)
-        powerbins = linspace(-0.5,0.5,10);
-        logISIbins = linspace(-2.5,1,50);
+    function [I2] = ISIpowerMutInf(prevISI,nextISI,spkLFP)
+        %powerbins = linspace(-1,1.5,8);
+        %logISIbins = linspace(-2.5,1,75);
+        allISIs = [prevISI;nextISI];
+        allLFP = [spkLFP;spkLFP];
+        allLFP(isnan(allISIs),:)=[];
+        allISIs(isnan(allISIs))=[];
+        
         for ff = 1:size(spkLFP,2)
-            allISIs = [prevISI;nextISI];
-            allLFP = [spkLFP;spkLFP];
 
-            joint = hist3([log10(allISIs) log10(abs(allLFP(:,ff)))],{logISIbins,powerbins});
-            joint = joint./sum(joint(:));
-
-            margX = hist(log10(allISIs),logISIbins);
-            margX = margX./sum(margX);
-            margPower = hist(log10(abs(allLFP(:,ff))),powerbins);
-            margPower = margPower./sum(margPower);
-            jointindependent =  bsxfun(@times, margX.', margPower);
-
-
-            mutXPow = joint.*log2(joint./jointindependent); % mutual info at each bin
-            totmutXPow(ff) = nansum(mutXPow(:)); % sum of all mutual information 
+            %ff
+%             joint = hist3([log10(allISIs) log2(abs(allLFP(:,ff)))],{logISIbins,powerbins});
+%             joint = joint./sum(joint(:));
+% 
+%             margX = hist(log10(allISIs),logISIbins);
+%             margX = margX./sum(margX);
+%             margPower = hist(log2(abs(allLFP(:,ff))),powerbins);
+%             margPower = margPower./sum(margPower);
+%             jointindependent =  bsxfun(@times, margX.', margPower);
+% 
+% 
+%             mutXPow = joint.*log2(joint./jointindependent); % mutual info at each bin
+%             totmutXPow(ff) = nansum(mutXPow(:)); % sum of all mutual information 
+%             
+%            [ I(ff) ] = kernelmi( log10(allISIs)', log2(abs(allLFP(:,ff)))' );
+            I2(ff) = mutualinfo(log10(allISIs),log2(abs(allLFP(:,ff))));
+            %I3(ff) = mutualinfo((allISIs),(abs(allLFP(:,ff))));
         end
         
         %% Example Figure: ISI-power modulation
 %         figure
-%         subplot(2,2,1)
-%             imagesc(logISIbins,powerbins,joint')
-%         subplot(2,2,2)
-%             imagesc(logISIbins,powerbins,jointindependent')
+% %         subplot(2,2,1)
+% %             imagesc((logISIbins),powerbins,joint')
+% %             axis xy
+% %             LogScale('x',10);LogScale('y',2)
+% %             xlabel('ISI (s)');ylabel('Power')
+% %         subplot(2,2,2)
+% %             imagesc((logISIbins),powerbins,jointindependent')
+% %             axis xy
+% %             %LogScale('xy',10)
+% % 
+% %             xlabel('ISI (s)');ylabel('Power')
+% 
+%         subplot(2,2,3)
+%             %plot(totmutXPow)
+%             hold on
+%             %plot(I)
+%              plot(I2)
+%              %plot(I3)
         
     end
 end
