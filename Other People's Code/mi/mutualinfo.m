@@ -19,6 +19,11 @@ function h = mutualinfo(vec1,vec2)
 % By Hanchuan Peng, April/2002
 %
 
+%% Fix for inf/nan bug
+infnan = isinf(vec1) | isinf(vec2) | isnan(vec1) | isnan(vec2);
+vec1(infnan) = [];
+vec2(infnan) = [];
+%%
 [p12, p1, p2] = estpab(vec1,vec2);
 h = estmutualinfo(p12,p1,p2);
 
