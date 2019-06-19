@@ -10,8 +10,10 @@ function [ T, Y_sol,Inoise,Ipulse ] = WCadapt_run(simtime,dt,parms,varargin)
 %   .tau_a
 %   .Ak
 %   .A0
+%           %noise params can be a vector for multiple sources of noise
 %   .noiseamp
 %   .noisefreq
+%   .samenoise  same noise across neurons?
 %   .pulseparms (optional)   [t_onset magnitude duration]
 %
 %
@@ -26,8 +28,9 @@ parse(p,varargin{:})
 init = p.Results.init;
 
 
-
-parms.samenoise = false;
+if ~isfield(parms,'samenoise')
+    parms.samenoise = false(size(parms.noiseamp));
+end
 
 %% Establish Vectors etc
 N_neurons = parms.N_neurons;
@@ -65,13 +68,17 @@ t_tot = simtime/dt;             %number of iterations
 tspan = [0:dt:simtime]';         %interval of integration
 
 %% Noise for Input
-switch parms.samenoise
-    case true
-        numsignals = 1;
-    case false
-        numsignals = N_neurons;
-end 
-[ Inoise,noiseT ] = OUNoise(noisefreq,noiseamp,simtime,dt./10,dt,numsignals);
+numnoises = length(noiseamp);
+for nn = 1:numnoises
+    switch parms.samenoise(nn)
+        case true
+            numsignals = 1;
+        case false
+            numsignals = N_neurons;
+    end 
+    [Inoise(:,:,nn),noiseT ] = OUNoise(noisefreq(nn),noiseamp(nn),simtime,dt./10,dt,numsignals);
+end
+
 %% System of Equations
 
     function dy = WCadapt_eqs(t, y)
@@ -89,7 +96,7 @@ end
         a = y(a_indexlow:a_indexhigh);
         
         %% THE DIFF.EQS%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        I_tot = W*r - beta.*a + I_in + interp1(noiseT,Inoise,t)' + pulsefun(t,pulseparms);
+        I_tot = W*r - beta.*a + I_in + interp1(noiseT,sum(Inoise,3),t)' + pulsefun(t,pulseparms);
         
         F_I = 1./(1+exp(-I_tot));
         Ainf = 1./(1+exp(-Ak.*(r-A0)));

@@ -16,11 +16,16 @@ function [ results,baseNames ] = GetMatResults(lookatfolder,matname,varargin)
 %%
 p = inputParser;
 addParameter(p,'select',false,@islogical)
+addParameter(p,'baseNames',[])
 parse(p,varargin{:})
 select = p.Results.select;
+baseNames = p.Results.baseNames;
+
 %%
 matnames = dir(fullfile(lookatfolder,['*',matname,'.mat']));
-baseNames = cellfun(@(X) strtok(X,'.'),{matnames.name},'UniformOutput',false);
+if ~isempty(baseNames)
+    baseNames = cellfun(@(X) strtok(X,'.'),{matnames.name},'UniformOutput',false);
+end
 
 %User select recordings
 if select
