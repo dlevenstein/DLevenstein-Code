@@ -1,4 +1,4 @@
-function [ T, Y_sol,Inoise,Ipulse ] = WCadapt_run(simtime,dt,parms,varargin)
+function [ T, Y_sol,Inoise,Ipulse,Iramp ] = WCadapt_run(simtime,dt,parms,varargin)
 %UNTITLED2 Summary of this function goes here
 %
 %parms
@@ -15,6 +15,7 @@ function [ T, Y_sol,Inoise,Ipulse ] = WCadapt_run(simtime,dt,parms,varargin)
 %   .noisefreq
 %   .samenoise  same noise across neurons?
 %   .pulseparms (optional)   [t_onset magnitude duration]
+%   .rampparms (optional)   [min max]
 %
 %
 %TO DO:
@@ -48,6 +49,12 @@ pulseparms = [0 0 0];
 if isfield(parms,'pulseparms')
     if isempty(parms.pulseparms);pulseparms = [0 0 0];end
     pulseparms = parms.pulseparms;
+end
+
+rampparms = [0 0];
+if isfield(parms,'rampparms')
+    if isempty(parms.rampparms);rampparms = [0 0];end
+    rampparms = parms.rampparms;
 end
 
 
@@ -96,7 +103,8 @@ end
         a = y(a_indexlow:a_indexhigh);
         
         %% THE DIFF.EQS%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        I_tot = W*r - beta.*a + I_in + interp1(noiseT,sum(Inoise,3),t)' + pulsefun(t,pulseparms);
+        I_tot = W*r - beta.*a + I_in + interp1(noiseT,sum(Inoise,3),t)' + ...
+            pulsefun(t,pulseparms) + rampfun(t,rampparms);
         
         F_I = 1./(1+exp(-I_tot));
         Ainf = 1./(1+exp(-Ak.*(r-A0)));
@@ -115,6 +123,7 @@ end
 
 %noise
 Ipulse = pulsefun(T,pulseparms);
+Iramp = rampfun(T,rampparms);
 %% Function for pulse
 function Ipulse_out = pulsefun(t_in,pulseparms_in)
     t_onset=pulseparms_in(1);magnitude=pulseparms_in(2);duration=pulseparms_in(3);
@@ -132,5 +141,9 @@ function Ipulse_out = pulsefun(t_in,pulseparms_in)
 %     end
 end
 
+%% Function for ramp
+    function Iramp_out = rampfun(t_in,rampparms_in)
+        Iramp_out = rampparms_in(1) + ((rampparms_in(2)-rampparms_in(1))./simtime).*t_in;
+    end
 end
 
