@@ -7,8 +7,8 @@ function [ results,baseNames ] = GetMatResults(lookatfolder,matname,varargin)
 %   matname         name of the analysis mat (i.e. '_NREMStats')
 %
 %   (options)
-%       recordings      'select' to choose whichrecordings to load
-%
+%       'select'      t/f to choose whichrecordings to load
+%       'baseNames'
 %DLevenstein 2016
 %% DEV
 % lookatfolder = '/Users/dlevenstein/Dropbox/Research/Current Projects/TransitionsAndSpindles/AnalysisScripts/AnalysisFigs/NREMTemporalStatsAnalysis';
@@ -23,17 +23,20 @@ baseNames = p.Results.baseNames;
 
 %%
 matnames = dir(fullfile(lookatfolder,['*',matname,'.mat']));
+possiblebaseNames = cellfun(@(X) strtok(X,'.'),{matnames.name},'UniformOutput',false);
+
 if ~isempty(baseNames)
-    baseNames = cellfun(@(X) strtok(X,'.'),{matnames.name},'UniformOutput',false);
+    matnames = matnames(ismember(possiblebaseNames,baseNames));
+    possiblebaseNames = baseNames;
 end
 
 %User select recordings
 if select
     
       [s,v] = listdlg('PromptString','Which recording(s) would you like?',...
-                    'ListString',baseNames);
+                    'ListString',possiblebaseNames);
     matnames = matnames(s);
-    baseNames = baseNames(s);
+    baseNames = possiblebaseNames(s);
 end
 
 nummats = length(matnames);
